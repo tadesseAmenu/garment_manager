@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <title>Garment Worker Management System</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Mobile Header -->
+    <header class="mobile-header">
+        <button class="menu-toggle" id="menuToggle">
+            <i class="fas fa-bars"></i>
+        </button>
+        <div class="mobile-logo">
+            <i class="fas fa-tshirt"></i>
+            <span>Garment Pro</span>
+        </div>
+        <div class="mobile-header-actions">
+            <div class="mobile-stats">
+                <span id="mobileTotal">0</span>
+            </div>
+            <button class="theme-toggle" id="mobileThemeToggle" title="Toggle Dark/Light Mode">
+                <i class="fas fa-moon"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Mobile Navigation -->
+    <nav class="mobile-nav" id="mobileNav">
+        <div class="nav-header">
+            <h3>Garment Pro</h3>
+            <div>
+                <button class="theme-toggle nav-theme-toggle" id="navThemeToggle" title="Toggle Theme">
+                    <i class="fas fa-moon"></i>
+                </button>
+                <button class="close-nav" id="closeNav">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+        <div class="nav-items">
+            <a href="#form" class="nav-item active" data-section="form">
+                <i class="fas fa-user-plus"></i>
+                <span>New Employee</span>
+            </a>
+            <a href="#daily" class="nav-item" data-section="daily">
+                <i class="fas fa-calendar-day"></i>
+                <span>Daily Entry</span>
+                <span class="badge" id="navDaily">0</span>
+            </a>
+            <a href="#weekly" class="nav-item" data-section="weekly">
+                <i class="fas fa-calendar-week"></i>
+                <span>Weekly</span>
+                <span class="badge" id="navWeekly">0</span>
+            </a>
+            <a href="#monthly" class="nav-item" data-section="monthly">
+                <i class="fas fa-calendar-alt"></i>
+                <span>Monthly</span>
+                <span class="badge" id="navMonthly">0</span>
+            </a>
+            <a href="#export" class="nav-item" data-section="export">
+                <i class="fas fa-download"></i>
+                <span>Export</span>
+            </a>
+            <a href="#settings" class="nav-item" data-section="settings">
+                <i class="fas fa-cog"></i>
+                <span>Settings</span>
+            </a>
+        </div>
+        <div class="nav-footer">
+            <div class="user-info">
+                <i class="fas fa-user-tie"></i>
+                <div>
+                    <strong>Manager</strong>
+                    <small>Garment Factory</small>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Desktop Header -->
+        <header class="desktop-header">
+            <div class="logo-section">
+                <div class="logo">
+                    <i class="fas fa-tshirt"></i>
+                    <div>
+                        <h1>Garment Worker Management</h1>
+                        <p class="subtitle">Production Tracking System</p>
+                    </div>
+                </div>
+                <button class="theme-toggle desktop-theme-toggle" id="desktopThemeToggle" title="Toggle Dark/Light Mode">
+                    <i class="fas fa-moon"></i>
+                    <span class="theme-label">Dark Mode</span>
+                </button>
+            </div>
+            <div class="quick-stats">
+                <div class="stat">
+                    <i class="fas fa-users"></i>
+                    <div>
+                        <span class="stat-value" id="desktopTotal">0</span>
+                        <span class="stat-label">Employees</span>
+                    </div>
+                </div>
+                <div class="stat">
+                    <i class="fas fa-tshirt"></i>
+                    <div>
+                        <span class="stat-value" id="desktopGarments">0</span>
+                        <span class="stat-label">Garments</span>
+                    </div>
+                </div>
+                <div class="stat">
+                    <i class="fas fa-clock"></i>
+                    <div>
+                        <span class="stat-value" id="desktopHours">0</span>
+                        <span class="stat-label">Hours</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- New Employee Form -->
+            <section id="form" class="content-section active">
+                <div class="section-header">
+                    <h2><i class="fas fa-user-plus"></i> New Employee Entry</h2>
+                    <div class="section-actions">
+                        <button class="btn btn-sm btn-outline" id="clearForm">
+                            <i class="fas fa-redo"></i> Clear
+                        </button>
+                        <button class="btn btn-sm btn-outline" id="cancelEdit" style="display: none;">
+                            <i class="fas fa-times"></i> Cancel
+                        </button>
+                    </div>
+                </div>
+
+                <form id="employeeForm">
+                    <input type="hidden" id="editId" value="">
+                    
+                    <div class="form-card">
+                        <h3 class="form-card-title">
+                            <i class="fas fa-id-card"></i> Basic Information
+                        </h3>
+                        
+                        <div class="form-row">
+                            <div class="input-group">
+                                <label for="employeeName">
+                                    <i class="fas fa-user"></i> Employee Name *
+                                </label>
+                                <input type="text" id="employeeName" required 
+                                       placeholder="Enter full name">
+                            </div>
+
+                            <div class="input-group">
+                                <label for="employeeType">
+                                    <i class="fas fa-user-tag"></i> Employee Type *
+                                </label>
+                                <div class="radio-group">
+                                    <label class="radio-option">
+                                        <input type="radio" name="employeeType" value="weekly" required>
+                                        <span class="radio-custom">
+                                            <i class="fas fa-calendar-week"></i>
+                                            Weekly
+                                        </span>
+                                    </label>
+                                    <label class="radio-option">
+                                        <input type="radio" name="employeeType" value="monthly" required>
+                                        <span class="radio-custom">
+                                            <i class="fas fa-calendar-alt"></i>
+                                            Monthly
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="input-group">
+                                <label for="dailyClothes">
+                                    <i class="fas fa-tshirt"></i> Garments Produced *
+                                </label>
+                                <input type="number" id="dailyClothes" min="0" required 
+                                       placeholder="Number of garments">
+                            </div>
+
+                            <div class="input-group">
+                                <label for="workDate">
+                                    <i class="fas fa-calendar"></i> Work Date *
+                                </label>
+                                <input type="date" id="workDate" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-card">
+                        <h3 class="form-card-title">
+                            <i class="fas fa-clock"></i> Time Tracking
+                        </h3>
+                        
+                        <div class="time-inputs">
+                            <div class="time-input-group">
+                                <label for="startTime">Start Time *</label>
+                                <input type="time" id="startTime" required>
+                            </div>
+
+                            <div class="time-input-group">
+                                <label for="breakTime">Lunch Break *</label>
+                                <input type="time" id="breakTime" required>
+                            </div>
+
+                            <div class="time-input-group">
+                                <label for="endTime">End Time *</label>
+                                <input type="time" id="endTime" required>
+                            </div>
+                        </div>
+
+                        <div class="time-summary">
+                            <div class="summary-item">
+                                <span>Total Hours</span>
+                                <strong id="totalHours">0.00</strong>
+                            </div>
+                            <div class="summary-item">
+                                <span>Net Hours</span>
+                                <strong id="netHours">0.00</strong>
+                            </div>
+                            <div class="summary-item">
+                                <span>Break Duration</span>
+                                <strong id="breakDuration">0.00</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-card">
+                        <h3 class="form-card-title">
+                            <i class="fas fa-sticky-note"></i> Additional Information
+                        </h3>
+                        
+                        <div class="input-group">
+                            <label for="notes">
+                                <i class="fas fa-comment-alt"></i> Notes (Optional)
+                            </label>
+                            <textarea id="notes" rows="3" 
+                                      placeholder="Add any notes or comments..."></textarea>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" id="submitForm" class="btn btn-primary btn-block">
+                            <i class="fas fa-save"></i> Save Employee Entry
+                        </button>
+                        <button type="button" id="updateForm" class="btn btn-success btn-block" style="display: none;">
+                            <i class="fas fa-sync-alt"></i> Update Entry
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Daily Entry Section -->
+            <section id="daily" class="content-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-calendar-day"></i> Daily Production Entry</h2>
+                    <div class="section-actions">
+    <div class="dropdown">
+        <button class="btn btn-sm btn-outline" onclick="toggleDailyExportMenu()">
+            <i class="fas fa-download"></i> Export
+        </button>
+        <div class="dropdown-menu" id="dailyExportMenu">
+            <button class="dropdown-item" onclick="exportDailyToPDF()">
+                <i class="fas fa-file-pdf"></i> PDF Format
+            </button>
+            <button class="dropdown-item" onclick="exportDailyToExcel()">
+                <i class="fas fa-file-excel"></i> Excel Format
+            </button>
+        </div>
+    </div>
+    <button class="btn btn-sm btn-primary" id="addAllToday">
+        <i class="fas fa-plus-circle"></i> Add All
+    </button>
+</div>
+                </div>
+
+                <div class="form-card">
+                    <h3 class="form-card-title">
+                        <i class="fas fa-calendar-check"></i> Selected Date: 
+                        <input type="date" id="dailyDate" style="margin-left: 10px; padding: 4px 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+                    </h3>
+                    <p style="color: var(--text-secondary); font-size: var(--text-sm); margin-top: 8px;">
+                        Today: <span id="todayDate"></span> • Total Employees: <span id="totalEmployees">0</span>
+                    </p>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <i class="fas fa-user-clock"></i>
+                        <div>
+                            <span class="stat-value" id="dailyActive">0</span>
+                            <span class="stat-label">Working Today</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-tshirt"></i>
+                        <div>
+                            <span class="stat-value" id="dailyGarments">0</span>
+                            <span class="stat-label">Total Garments</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-clock"></i>
+                        <div>
+                            <span class="stat-value" id="dailyHours">0</span>
+                            <span class="stat-label">Total Hours</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-chart-line"></i>
+                        <div>
+                            <span class="stat-value" id="dailyAvg">0</span>
+                            <span class="stat-label">Avg/Employee</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-container" id="dailyTableContainer">
+                    <div class="table-responsive">
+                        <table class="data-table" id="dailyTable">
+                            <thead>
+                                <tr>
+                                    <th>Employee</th>
+                                    <th>Type</th>
+                                    <th>Garments</th>
+                                    <th>Time</th>
+                                    <th>Hours</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dailyTableBody">
+                                <!-- Daily entries will be inserted here -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="empty-state" id="dailyEmpty">
+                        <i class="fas fa-users"></i>
+                        <h3>No Employees Added</h3>
+                        <p>Add employees in the New Employee section first.</p>
+                        <button class="btn btn-primary" onclick="showSection('form')" style="margin-top: 16px;">
+                            <i class="fas fa-user-plus"></i> Add Employee
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" id="saveDailyEntries" class="btn btn-success btn-block">
+                        <i class="fas fa-save"></i> Save All Daily Entries to Records
+                    </button>
+                    <p style="text-align: center; color: var(--text-secondary); font-size: var(--text-sm); margin-top: 8px;">
+                        This will save all entries as permanent records in Weekly/Monthly sections
+                    </p>
+                </div>
+            </section>
+
+            <!-- Weekly Employees Section -->
+            <section id="weekly" class="content-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-calendar-week"></i> Weekly Employees</h2>
+                    <div class="section-actions">
+                        <button class="btn btn-sm btn-outline" onclick="exportToPDF()">
+                            <i class="fas fa-download"></i> Export
+                        </button>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <i class="fas fa-users"></i>
+                        <div>
+                            <span class="stat-value" id="weeklyCount">0</span>
+                            <span class="stat-label">Employees</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-tshirt"></i>
+                        <div>
+                            <span class="stat-value" id="weeklyGarments">0</span>
+                            <span class="stat-label">Garments</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-clock"></i>
+                        <div>
+                            <span class="stat-value" id="weeklyHours">0</span>
+                            <span class="stat-label">Hours</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-chart-line"></i>
+                        <div>
+                            <span class="stat-value" id="weeklyAvg">0</span>
+                            <span class="stat-label">Avg/Day</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <div class="table-responsive">
+                        <table class="data-table" id="weeklyTable">
+                            <thead>
+                                <tr>
+                                    <th data-sort="name">Name</th>
+                                    <th data-sort="date">Date</th>
+                                    <th data-sort="clothes">Garments</th>
+                                    <th data-sort="hours">Hours</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="weeklyTableBody">
+                                <!-- Weekly employees will be inserted here -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="empty-state" id="weeklyEmpty">
+                        <i class="fas fa-user-clock"></i>
+                        <h3>No Weekly Employees</h3>
+                        <p>Add your first weekly employee in the New Entry section.</p>
+                    </div>
+                </div>
+
+                <div class="table-footer">
+                    <div class="pagination-info">
+                        Showing <span id="weeklyShowing">0</span> of <span id="weeklyTotal">0</span> entries
+                    </div>
+                    <div class="table-actions">
+                        <button class="btn btn-sm" id="prevWeekly" disabled>
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <span class="page-info">Page 1</span>
+                        <button class="btn btn-sm" id="nextWeekly" disabled>
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Monthly Employees Section -->
+            <section id="monthly" class="content-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-calendar-alt"></i> Monthly Employees</h2>
+                    <div class="section-actions">
+                        <button class="btn btn-sm btn-outline" onclick="exportToPDF()">
+                            <i class="fas fa-download"></i> Export
+                        </button>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <i class="fas fa-users"></i>
+                        <div>
+                            <span class="stat-value" id="monthlyCount">0</span>
+                            <span class="stat-label">Employees</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-tshirt"></i>
+                        <div>
+                            <span class="stat-value" id="monthlyGarments">0</span>
+                            <span class="stat-label">Garments</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-clock"></i>
+                        <div>
+                            <span class="stat-value" id="monthlyHours">0</span>
+                            <span class="stat-label">Hours</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-chart-line"></i>
+                        <div>
+                            <span class="stat-value" id="monthlyAvg">0</span>
+                            <span class="stat-label">Avg/Day</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <div class="table-responsive">
+                        <table class="data-table" id="monthlyTable">
+                            <thead>
+                                <tr>
+                                    <th data-sort="name">Name</th>
+                                    <th data-sort="date">Date</th>
+                                    <th data-sort="clothes">Garments</th>
+                                    <th data-sort="hours">Hours</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="monthlyTableBody">
+                                <!-- Monthly employees will be inserted here -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="empty-state" id="monthlyEmpty">
+                        <i class="fas fa-user-tie"></i>
+                        <h3>No Monthly Employees</h3>
+                        <p>Add your first monthly employee in the New Entry section.</p>
+                    </div>
+                </div>
+
+                <div class="table-footer">
+                    <div class="pagination-info">
+                        Showing <span id="monthlyShowing">0</span> of <span id="monthlyTotal">0</span> entries
+                    </div>
+                    <div class="table-actions">
+                        <button class="btn btn-sm" id="prevMonthly" disabled>
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <span class="page-info">Page 1</span>
+                        <button class="btn btn-sm" id="nextMonthly" disabled>
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Export Section -->
+            <section id="export" class="content-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-download"></i> Export Data</h2>
+                </div>
+
+                <div class="export-options">
+                    <div class="export-card pdf-card">
+                        <div class="export-icon">
+                            <i class="fas fa-file-pdf"></i>
+                        </div>
+                        <div class="export-info">
+                            <h3>Complete Report (PDF)</h3>
+                            <p>Generate professional PDF report with all employee data</p>
+                        </div>
+                        <button class="btn btn-primary" onclick="exportToPDF()">
+                            <i class="fas fa-download"></i> Generate PDF
+                        </button>
+                    </div>
+
+                    <div class="export-card excel-card">
+                        <div class="export-icon">
+                            <i class="fas fa-file-excel"></i>
+                        </div>
+                        <div class="export-info">
+                            <h3>Excel Spreadsheet</h3>
+                            <p>Export data to Excel with formatted tables</p>
+                        </div>
+                        <button class="btn btn-success" onclick="exportToExcel()">
+                            <i class="fas fa-download"></i> Generate Excel
+                        </button>
+                    </div>
+
+                    <div class="export-card backup-card">
+                        <div class="export-icon">
+                            <i class="fas fa-database"></i>
+                        </div>
+                        <div class="export-info">
+                            <h3>Backup Data</h3>
+                            <p>Save all data as JSON file for backup</p>
+                        </div>
+                        <button class="btn btn-secondary" onclick="exportBackup()">
+                            <i class="fas fa-save"></i> Backup Now
+                        </button>
+                    </div>
+                </div>
+
+                <div class="export-preview">
+                    <h3><i class="fas fa-eye"></i> Data Preview</h3>
+                    <div class="preview-grid">
+                        <div class="preview-card">
+                            <div class="preview-header">
+                                <i class="fas fa-calendar-week"></i>
+                                <h4>Weekly Employees</h4>
+                            </div>
+                            <div class="preview-stats">
+                                <div class="preview-stat">
+                                    <span>Total:</span>
+                                    <strong id="previewWeekly">0</strong>
+                                </div>
+                                <div class="preview-stat">
+                                    <span>Garments:</span>
+                                    <strong id="previewWeeklyGarments">0</strong>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="preview-card">
+                            <div class="preview-header">
+                                <i class="fas fa-calendar-alt"></i>
+                                <h4>Monthly Employees</h4>
+                            </div>
+                            <div class="preview-stats">
+                                <div class="preview-stat">
+                                    <span>Total:</span>
+                                    <strong id="previewMonthly">0</strong>
+                                </div>
+                                <div class="preview-stat">
+                                    <span>Garments:</span>
+                                    <strong id="previewMonthlyGarments">0</strong>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="preview-card">
+                            <div class="preview-header">
+                                <i class="fas fa-calendar-day"></i>
+                                <h4>Daily Activity</h4>
+                            </div>
+                            <div class="preview-stats">
+                                <div class="preview-stat">
+                                    <span>Today:</span>
+                                    <strong id="previewToday">0</strong>
+                                </div>
+                                <div class="preview-stat">
+                                    <span>Garments:</span>
+                                    <strong id="previewTodayGarments">0</strong>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="preview-card">
+                            <div class="preview-header">
+                                <i class="fas fa-chart-pie"></i>
+                                <h4>Overview</h4>
+                            </div>
+                            <div class="preview-stats">
+                                <div class="preview-stat">
+                                    <span>Total:</span>
+                                    <strong id="previewTotal">0</strong>
+                                </div>
+                                <div class="preview-stat">
+                                    <span>Hours:</span>
+                                    <strong id="previewHours">0</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Settings Section -->
+            <section id="settings" class="content-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-cog"></i> Settings</h2>
+                </div>
+
+                <div class="settings-options">
+                    <div class="settings-card">
+                        <h3><i class="fas fa-broom"></i> Data Management</h3>
+                        <div class="settings-group">
+                            <button class="btn btn-danger btn-block" onclick="clearAllData()">
+                                <i class="fas fa-trash"></i> Clear All Data
+                            </button>
+                            <p class="settings-hint">This will permanently delete all employee records.</p>
+                        </div>
+                        <div class="settings-group">
+                            <button class="btn btn-warning btn-block" onclick="clearDailyEntries()">
+                                <i class="fas fa-calendar-times"></i> Clear Today's Entries
+                            </button>
+                            <p class="settings-hint">Clear only today's daily entries (keeps permanent records).</p>
+                        </div>
+                    </div>
+
+                    <div class="settings-card">
+                        <h3><i class="fas fa-sync-alt"></i> Import Data</h3>
+                        <div class="settings-group">
+                            <label class="file-input">
+                                <input type="file" id="importFile" accept=".json" hidden>
+                                <i class="fas fa-upload"></i>
+                                <span>Choose Backup File</span>
+                            </label>
+                            <p class="settings-hint">Import data from a previously saved backup file.</p>
+                        </div>
+                    </div>
+
+                    <div class="settings-card">
+                        <h3><i class="fas fa-info-circle"></i> System Info</h3>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <span>Total Entries:</span>
+                                <strong id="settingsTotal">0</strong>
+                            </div>
+                            <div class="info-item">
+                                <span>Storage Used:</span>
+                                <strong id="settingsStorage">0 KB</strong>
+                            </div>
+                            <div class="info-item">
+                                <span>App Version:</span>
+                                <strong>3.1.0</strong>
+                            </div>
+                            <div class="info-item">
+                                <span>Last Backup:</span>
+                                <strong id="settingsBackup">Never</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Mobile Bottom Navigation -->
+        <nav class="bottom-nav">
+            <a href="#form" class="nav-link active" data-section="form">
+                <i class="fas fa-user-plus"></i>
+                <span>New</span>
+            </a>
+            <a href="#daily" class="nav-link" data-section="daily">
+                <i class="fas fa-calendar-day"></i>
+                <span>Daily</span>
+            </a>
+            <a href="#weekly" class="nav-link" data-section="weekly">
+                <i class="fas fa-calendar-week"></i>
+                <span>Weekly</span>
+            </a>
+            <a href="#monthly" class="nav-link" data-section="monthly">
+                <i class="fas fa-calendar-alt"></i>
+                <span>Monthly</span>
+            </a>
+            <a href="#export" class="nav-link" data-section="export">
+                <i class="fas fa-download"></i>
+                <span>Export</span>
+            </a>
+        </nav>
+
+        <!-- Desktop Footer -->
+        <footer class="desktop-footer">
+            <div class="footer-info">
+                <div class="footer-logo">
+                    <i class="fas fa-tshirt"></i>
+                    <div>
+                        <h3>Garment Worker Management</h3>
+                        <p>Production Tracking & Reporting System</p>
+                    </div>
+                </div>
+                <div class="footer-stats">
+                    <div class="footer-stat">
+                        <i class="fas fa-users"></i>
+                        <div>
+                            <span class="footer-value" id="footerTotal">0</span>
+                            <span class="footer-label">Employees</span>
+                        </div>
+                    </div>
+                    <div class="footer-stat">
+                        <i class="fas fa-tshirt"></i>
+                        <div>
+                            <span class="footer-value" id="footerGarments">0</span>
+                            <span class="footer-label">Garments</span>
+                        </div>
+                    </div>
+                    <div class="footer-stat">
+                        <i class="fas fa-chart-line"></i>
+                        <div>
+                            <span class="footer-value" id="footerEfficiency">0</span>
+                            <span class="footer-label">Garments/Hour</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-copyright">
+                <p>&copy; <span id="currentYear"></span> Garment Pro Management System v3.1</p>
+                <p class="version">Professional Production Tracking | Enhanced Reporting</p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer"></div>
+
+    <!-- Export Menu (Mobile) -->
+    <div class="export-menu" id="exportMenu">
+        <div class="export-menu-header">
+            <h3>Export Options</h3>
+            <button class="close-export-menu" onclick="hideExportMenu()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="export-menu-items">
+            <button class="export-menu-item" onclick="exportToPDF()">
+                <i class="fas fa-file-pdf"></i>
+                <span>Export to PDF</span>
+            </button>
+            <button class="export-menu-item" onclick="exportToExcel()">
+                <i class="fas fa-file-excel"></i>
+                <span>Export to Excel</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.28/dist/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
