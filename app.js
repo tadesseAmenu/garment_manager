@@ -1,13 +1,11 @@
 // ============================================
 // Garment Worker Management System
-// Version 3.1.0 - Complete Production System
+// Version 3.2.2 - COMPLETE FIXED VERSION
 // ============================================
 
 // Application State
 const AppState = {
-    employees: [],          // Permanent employee records
-    dailyEntries: {},       // Temporary daily entries by date
-    employeeList: [],       // List of all employee names
+    employees: [],
     nextId: 1,
     currentSection: 'form',
     currentPage: {
@@ -20,214 +18,133 @@ const AppState = {
         monthly: { key: 'date', direction: 'desc' }
     },
     isDarkMode: false,
-    editingId: null,        // For editing employee records
-    selectedDate: null      // Current date for daily entries
-};
-
-// DOM Elements Cache
-const DOM = {
-    // Theme elements
-    mobileThemeToggle: document.getElementById('mobileThemeToggle'),
-    navThemeToggle: document.getElementById('navThemeToggle'),
-    desktopThemeToggle: document.getElementById('desktopThemeToggle'),
-    
-    // Mobile elements
-    menuToggle: document.getElementById('menuToggle'),
-    mobileNav: document.getElementById('mobileNav'),
-    closeNav: document.getElementById('closeNav'),
-    navWeekly: document.getElementById('navWeekly'),
-    navMonthly: document.getElementById('navMonthly'),
-    navDaily: document.getElementById('navDaily'),
-    mobileTotal: document.getElementById('mobileTotal'),
-    
-    // Form elements
-    employeeForm: document.getElementById('employeeForm'),
-    clearForm: document.getElementById('clearForm'),
-    cancelEdit: document.getElementById('cancelEdit'),
-    employeeName: document.getElementById('employeeName'),
-    employeeType: document.querySelectorAll('input[name="employeeType"]'),
-    dailyClothes: document.getElementById('dailyClothes'),
-    workDate: document.getElementById('workDate'),
-    startTime: document.getElementById('startTime'),
-    breakTime: document.getElementById('breakTime'),
-    endTime: document.getElementById('endTime'),
-    notes: document.getElementById('notes'),
-    submitForm: document.getElementById('submitForm'),
-    updateForm: document.getElementById('updateForm'),
-    editId: document.getElementById('editId'),
-    
-    // Daily entry elements
-    dailyDate: document.getElementById('dailyDate'),
-    todayDate: document.getElementById('todayDate'),
-    totalEmployees: document.getElementById('totalEmployees'),
-    addAllToday: document.getElementById('addAllToday'),
-    saveDailyEntries: document.getElementById('saveDailyEntries'),
-    dailyTableBody: document.getElementById('dailyTableBody'),
-    dailyEmpty: document.getElementById('dailyEmpty'),
-    dailyTableContainer: document.getElementById('dailyTableContainer'),
-    
-    // Stats elements
-    dailyActive: document.getElementById('dailyActive'),
-    dailyGarments: document.getElementById('dailyGarments'),
-    dailyHours: document.getElementById('dailyHours'),
-    dailyAvg: document.getElementById('dailyAvg'),
-    weeklyCount: document.getElementById('weeklyCount'),
-    weeklyGarments: document.getElementById('weeklyGarments'),
-    weeklyHours: document.getElementById('weeklyHours'),
-    weeklyAvg: document.getElementById('weeklyAvg'),
-    monthlyCount: document.getElementById('monthlyCount'),
-    monthlyGarments: document.getElementById('monthlyGarments'),
-    monthlyHours: document.getElementById('monthlyHours'),
-    monthlyAvg: document.getElementById('monthlyAvg'),
-    desktopTotal: document.getElementById('desktopTotal'),
-    desktopGarments: document.getElementById('desktopGarments'),
-    desktopHours: document.getElementById('desktopHours'),
-    footerTotal: document.getElementById('footerTotal'),
-    footerGarments: document.getElementById('footerGarments'),
-    footerEfficiency: document.getElementById('footerEfficiency'),
-    
-    // Preview elements
-    previewWeekly: document.getElementById('previewWeekly'),
-    previewWeeklyGarments: document.getElementById('previewWeeklyGarments'),
-    previewMonthly: document.getElementById('previewMonthly'),
-    previewMonthlyGarments: document.getElementById('previewMonthlyGarments'),
-    previewToday: document.getElementById('previewToday'),
-    previewTodayGarments: document.getElementById('previewTodayGarments'),
-    previewTotal: document.getElementById('previewTotal'),
-    previewHours: document.getElementById('previewHours'),
-    
-    // Settings elements
-    settingsTotal: document.getElementById('settingsTotal'),
-    settingsStorage: document.getElementById('settingsStorage'),
-    settingsBackup: document.getElementById('settingsBackup'),
-    
-    // Export menu
-    exportMenu: document.getElementById('exportMenu'),
-    
-    // Pagination elements
-    prevWeekly: document.getElementById('prevWeekly'),
-    nextWeekly: document.getElementById('nextWeekly'),
-    prevMonthly: document.getElementById('prevMonthly'),
-    nextMonthly: document.getElementById('nextMonthly'),
-    weeklyShowing: document.getElementById('weeklyShowing'),
-    weeklyTotal: document.getElementById('weeklyTotal'),
-    monthlyShowing: document.getElementById('monthlyShowing'),
-    monthlyTotal: document.getElementById('monthlyTotal'),
-    
-    // Time calculation elements
-    totalHours: document.getElementById('totalHours'),
-    netHours: document.getElementById('netHours'),
-    breakDuration: document.getElementById('breakDuration')
-};
-
-// ============================================
-// Core Utility Functions
-// ============================================
-
-function generateId() {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2);
-}
-
-function formatDate(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        weekday: 'short'
-    });
-}
-
-function formatTime(timeString) {
-    if (!timeString) return 'N/A';
-    const [hours, minutes] = timeString.split(':');
-    const hour = parseInt(hours);
-    const ampm = hour >= 12 ? 'PM' : 'AM';
-    const hour12 = hour % 12 || 12;
-    return `${hour12}:${minutes.padStart(2, '0')} ${ampm}`;
-}
-
-function calculateTimeDifference(start, end) {
-    if (!start || !end) return 0;
-    
-    const startTime = new Date(`2000-01-01T${start}`);
-    const endTime = new Date(`2000-01-01T${end}`);
-    
-    if (endTime < startTime) {
-        endTime.setDate(endTime.getDate() + 1);
+    editingId: null,
+    dailyEntries: {},
+    selectedDate: null,
+    editingDailyId: null,
+    lastSaveTime: null,
+    currentSortColumn: {
+        weekly: null,
+        monthly: null
     }
-    
-    return (endTime - startTime) / (1000 * 60 * 60);
-}
+};
 
-function calculateNetHours(startTime, breakTime, endTime) {
-    const totalHours = calculateTimeDifference(startTime, endTime);
-    
-    if (breakTime && startTime && endTime) {
-        const breakStart = new Date(`2000-01-01T${breakTime}`);
-        const workStart = new Date(`2000-01-01T${startTime}`);
-        const workEnd = new Date(`2000-01-01T${endTime}`);
+// DOM Elements Cache (will be initialized in initDOM())
+let DOM = {};
+
+// ============================================
+// DOM Initialization - FIXED
+// ============================================
+
+function initDOM() {
+    DOM = {
+        // Theme elements
+        mobileThemeToggle: document.getElementById('mobileThemeToggle'),
+        navThemeToggle: document.getElementById('navThemeToggle'),
+        desktopThemeToggle: document.getElementById('desktopThemeToggle'),
         
-        if (breakStart >= workStart && breakStart <= workEnd) {
-            return Math.max(0, totalHours - 1);
-        }
-    }
-    
-    return totalHours;
-}
-
-function formatHours(hours) {
-    return parseFloat(hours).toFixed(2);
-}
-
-// ============================================
-// Toast Notification System
-// ============================================
-
-function showToast(message, type = 'success') {
-    const container = document.getElementById('toastContainer');
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    
-    const icons = {
-        success: 'check-circle',
-        error: 'exclamation-circle',
-        warning: 'exclamation-triangle',
-        info: 'info-circle'
+        // Mobile elements
+        menuToggle: document.getElementById('menuToggle'),
+        mobileNav: document.getElementById('mobileNav'),
+        closeNav: document.getElementById('closeNav'),
+        navWeekly: document.getElementById('navWeekly'),
+        navMonthly: document.getElementById('navMonthly'),
+        navDaily: document.getElementById('navDaily'),
+        mobileTotal: document.getElementById('mobileTotal'),
+        
+        // Form elements
+        employeeForm: document.getElementById('employeeForm'),
+        clearForm: document.getElementById('clearForm'),
+        cancelEdit: document.getElementById('cancelEdit'),
+        employeeName: document.getElementById('employeeName'),
+        employeeType: document.querySelectorAll('input[name="employeeType"]'),
+        dailyClothes: document.getElementById('dailyClothes'),
+        workDate: document.getElementById('workDate'),
+        startTime: document.getElementById('startTime'),
+        breakTime: document.getElementById('breakTime'),
+        endTime: document.getElementById('endTime'),
+        notes: document.getElementById('notes'),
+        submitForm: document.getElementById('submitForm'),
+        updateForm: document.getElementById('updateForm'),
+        editId: document.getElementById('editId'),
+        
+        // Daily entry elements
+        dailyDate: document.getElementById('dailyDate'),
+        todayDate: document.getElementById('todayDate'),
+        totalEmployees: document.getElementById('totalEmployees'),
+        dailyActive: document.getElementById('dailyActive'),
+        dailyGarments: document.getElementById('dailyGarments'),
+        dailyHours: document.getElementById('dailyHours'),
+        dailyAvg: document.getElementById('dailyAvg'),
+        addAllToday: document.getElementById('addAllToday'),
+        saveDailyEntries: document.getElementById('saveDailyEntries'),
+        dailyTableBody: document.getElementById('dailyTableBody'),
+        dailyEmpty: document.getElementById('dailyEmpty'),
+        dailyExportButton: document.getElementById('dailyExportButton'),
+        
+        // Table elements
+        weeklyTableBody: document.getElementById('weeklyTableBody'),
+        monthlyTableBody: document.getElementById('monthlyTableBody'),
+        weeklyEmpty: document.getElementById('weeklyEmpty'),
+        monthlyEmpty: document.getElementById('monthlyEmpty'),
+        
+        // Stats elements
+        weeklyCount: document.getElementById('weeklyCount'),
+        weeklyGarments: document.getElementById('weeklyGarments'),
+        weeklyHours: document.getElementById('weeklyHours'),
+        weeklyAvg: document.getElementById('weeklyAvg'),
+        monthlyCount: document.getElementById('monthlyCount'),
+        monthlyGarments: document.getElementById('monthlyGarments'),
+        monthlyHours: document.getElementById('monthlyHours'),
+        monthlyAvg: document.getElementById('monthlyAvg'),
+        desktopTotal: document.getElementById('desktopTotal'),
+        desktopGarments: document.getElementById('desktopGarments'),
+        desktopHours: document.getElementById('desktopHours'),
+        footerTotal: document.getElementById('footerTotal'),
+        footerGarments: document.getElementById('footerGarments'),
+        footerEfficiency: document.getElementById('footerEfficiency'),
+        
+        // Preview elements
+        previewWeekly: document.getElementById('previewWeekly'),
+        previewWeeklyGarments: document.getElementById('previewWeeklyGarments'),
+        previewMonthly: document.getElementById('previewMonthly'),
+        previewMonthlyGarments: document.getElementById('previewMonthlyGarments'),
+        previewToday: document.getElementById('previewToday'),
+        previewTodayGarments: document.getElementById('previewTodayGarments'),
+        previewTotal: document.getElementById('previewTotal'),
+        previewHours: document.getElementById('previewHours'),
+        
+        // Settings elements
+        settingsTotal: document.getElementById('settingsTotal'),
+        settingsStorage: document.getElementById('settingsStorage'),
+        settingsBackup: document.getElementById('settingsBackup'),
+        
+        // Export menu
+        dailyExportMenu: document.getElementById('dailyExportMenu'),
+        
+        // Pagination elements
+        prevWeekly: document.getElementById('prevWeekly'),
+        nextWeekly: document.getElementById('nextWeekly'),
+        prevMonthly: document.getElementById('prevMonthly'),
+        nextMonthly: document.getElementById('nextMonthly'),
+        weeklyShowing: document.getElementById('weeklyShowing'),
+        weeklyTotal: document.getElementById('weeklyTotal'),
+        monthlyShowing: document.getElementById('monthlyShowing'),
+        monthlyTotal: document.getElementById('monthlyTotal'),
+        weeklyPageInfo: document.querySelector('#weekly .page-info'),
+        monthlyPageInfo: document.querySelector('#monthly .page-info'),
+        
+        // Time calculation elements
+        totalHours: document.getElementById('totalHours'),
+        netHours: document.getElementById('netHours'),
+        breakDuration: document.getElementById('breakDuration'),
+        
+        // Desktop navigation
+        desktopNavLinks: document.querySelectorAll('.desktop-nav-link'),
+        
+        // Save indicator
+        saveIndicator: null
     };
-    
-    const titles = {
-        success: 'Success',
-        error: 'Error',
-        warning: 'Warning',
-        info: 'Information'
-    };
-    
-    toast.innerHTML = `
-        <i class="fas fa-${icons[type]} toast-icon"></i>
-        <div class="toast-content">
-            <h4>${titles[type]}</h4>
-            <p>${message}</p>
-        </div>
-        <button class="toast-close" onclick="this.parentElement.remove()">
-            <i class="fas fa-times"></i>
-        </button>
-    `;
-    
-    container.appendChild(toast);
-    
-    // Show with animation
-    setTimeout(() => toast.classList.add('show'), 10);
-    
-    // Auto remove after 5 seconds
-    setTimeout(() => {
-        toast.classList.remove('show');
-        setTimeout(() => {
-            if (toast.parentNode === container) {
-                toast.remove();
-            }
-        }, 300);
-    }, 5000);
 }
 
 // ============================================
@@ -240,7 +157,9 @@ function initTheme() {
     
     if (AppState.isDarkMode) {
         document.body.classList.add('dark-theme');
+        document.body.classList.remove('light-theme');
     } else {
+        document.body.classList.remove('dark-theme');
         document.body.classList.add('light-theme');
     }
     
@@ -251,8 +170,8 @@ function toggleTheme() {
     AppState.isDarkMode = !AppState.isDarkMode;
     
     if (AppState.isDarkMode) {
-        document.body.classList.remove('light-theme');
         document.body.classList.add('dark-theme');
+        document.body.classList.remove('light-theme');
         localStorage.setItem('garmentTheme', 'dark');
     } else {
         document.body.classList.remove('dark-theme');
@@ -287,6 +206,246 @@ function updateThemeButtons() {
 }
 
 // ============================================
+// Utility Functions
+// ============================================
+
+function generateId() {
+    return Date.now().toString(36) + Math.random().toString(36).substr(2);
+}
+
+function formatDate(dateString) {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+    });
+}
+
+function formatDateTime(dateString) {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+function formatTime(timeString) {
+    if (!timeString) return 'N/A';
+    const [hours, minutes] = timeString.split(':');
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const hour12 = hour % 12 || 12;
+    return `${hour12}:${minutes} ${ampm}`;
+}
+
+function calculateTimeDifference(start, end) {
+    if (!start || !end) return 0;
+    
+    const startTime = new Date(`2000-01-01T${start}`);
+    const endTime = new Date(`2000-01-01T${end}`);
+    
+    if (endTime < startTime) {
+        endTime.setDate(endTime.getDate() + 1);
+    }
+    
+    return (endTime - startTime) / (1000 * 60 * 60);
+}
+
+function calculateNetHours(startTime, breakTime, endTime) {
+    if (!startTime || !endTime) return 0;
+    
+    const totalHours = calculateTimeDifference(startTime, endTime);
+    
+    if (breakTime) {
+        const breakDuration = calculateActualBreakDuration(startTime, breakTime, endTime);
+        return Math.max(0, totalHours - breakDuration);
+    }
+    
+    return totalHours;
+}
+
+function calculateActualBreakDuration(startTime, breakTime, endTime) {
+    if (!breakTime || !startTime || !endTime) return 0;
+    
+    // Parse times
+    const [breakHour, breakMinute] = breakTime.split(':').map(Number);
+    const [startHour, startMinute] = startTime.split(':').map(Number);
+    const [endHour, endMinute] = endTime.split(':').map(Number);
+    
+    // Convert to minutes for easier calculation
+    const breakInMinutes = breakHour * 60 + breakMinute;
+    const startInMinutes = startHour * 60 + startMinute;
+    const endInMinutes = endHour * 60 + endMinute;
+    
+    // Check if break is within work hours
+    if (breakInMinutes >= startInMinutes && breakInMinutes <= endInMinutes) {
+        // Break is 1 hour (standard lunch break)
+        const breakEndInMinutes = breakInMinutes + 60;
+        
+        // If break extends beyond end time, calculate partial break
+        if (breakEndInMinutes > endInMinutes) {
+            return (endInMinutes - breakInMinutes) / 60;
+        }
+        return 1.0;
+    }
+    
+    return 0;
+}
+
+function formatHours(hours) {
+    return parseFloat(hours).toFixed(2);
+}
+
+// ============================================
+// Toast Notification System
+// ============================================
+
+function showToast(message, type = 'success', duration = 5000) {
+    const container = document.getElementById('toastContainer');
+    if (!container) {
+        console.error('Toast container not found');
+        return;
+    }
+    
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
+    
+    const icons = {
+        success: 'check-circle',
+        error: 'exclamation-circle',
+        warning: 'exclamation-triangle',
+        info: 'info-circle',
+        save: 'save'
+    };
+    
+    const titles = {
+        success: 'Success',
+        error: 'Error',
+        warning: 'Warning',
+        info: 'Information',
+        save: 'Saved'
+    };
+    
+    const icon = icons[type] || icons.info;
+    const title = titles[type] || 'Information';
+    
+    toast.innerHTML = `
+        <i class="fas fa-${icon} toast-icon"></i>
+        <div class="toast-content">
+            <h4>${title}</h4>
+            <p>${message}</p>
+            ${type === 'save' ? `<small class="text-muted">Just now</small>` : ''}
+        </div>
+        <button class="toast-close" onclick="this.parentElement.remove()" aria-label="Close">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    
+    container.appendChild(toast);
+    
+    // Force reflow
+    toast.offsetHeight;
+    
+    setTimeout(() => toast.classList.add('show'), 10);
+    
+    // Auto-remove after duration
+    const removeTimer = setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => {
+            if (toast.parentNode === container) {
+                toast.remove();
+            }
+        }, 300);
+    }, duration);
+    
+    // Pause auto-remove on hover
+    toast.addEventListener('mouseenter', () => clearTimeout(removeTimer));
+    toast.addEventListener('mouseleave', () => {
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => {
+                if (toast.parentNode === container) {
+                    toast.remove();
+                }
+            }, 300);
+        }, duration);
+    });
+}
+
+// ============================================
+// Form Validation
+// ============================================
+
+function validateForm(formData) {
+    const errors = [];
+    
+    if (!formData.name.trim()) {
+        errors.push('Employee name is required');
+    } else if (formData.name.trim().length < 2) {
+        errors.push('Name must be at least 2 characters');
+    }
+    
+    if (!formData.type) {
+        errors.push('Employee type is required');
+    }
+    
+    if (!formData.clothes || formData.clothes < 0) {
+        errors.push('Valid number of garments is required (minimum 0)');
+    }
+    
+    if (!formData.date) {
+        errors.push('Work date is required');
+    } else {
+        const selectedDate = new Date(formData.date);
+        const today = new Date();
+        today.setHours(23, 59, 59, 999);
+        
+        if (selectedDate > today) {
+            errors.push('Date cannot be in the future');
+        }
+    }
+    
+    if (!formData.startTime) errors.push('Start time is required');
+    if (!formData.breakTime) errors.push('Break time is required');
+    if (!formData.endTime) errors.push('End time is required');
+    
+    if (formData.startTime && formData.endTime && formData.endTime <= formData.startTime) {
+        errors.push('End time must be after start time');
+    }
+    
+    if (formData.startTime && formData.breakTime && formData.breakTime <= formData.startTime) {
+        errors.push('Break time must be after start time');
+    }
+    
+    if (formData.endTime && formData.breakTime && formData.endTime <= formData.breakTime) {
+        errors.push('Break time must be before end time');
+    }
+    
+    // Check for duplicate entry (same name and date)
+    if (formData.name && formData.date && !DOM.editId.value) {
+        const isDuplicate = AppState.employees.some(emp => 
+            emp.name.toLowerCase() === formData.name.toLowerCase().trim() &&
+            emp.date === formData.date
+        );
+        
+        if (isDuplicate) {
+            errors.push(`Employee "${formData.name}" already has an entry for ${formatDate(formData.date)}`);
+        }
+    }
+    
+    return errors;
+}
+
+// ============================================
 // Data Management
 // ============================================
 
@@ -297,18 +456,26 @@ function loadData() {
             const data = JSON.parse(saved);
             AppState.employees = data.employees || [];
             AppState.nextId = data.nextId || 1;
-            AppState.employeeList = data.employeeList || [];
             AppState.dailyEntries = data.dailyEntries || {};
+            AppState.lastSaveTime = data.lastSaved || null;
+            
+            // Update backup time display
+            if (DOM.settingsBackup && data.lastSaved) {
+                DOM.settingsBackup.textContent = formatDateTime(data.lastSaved);
+            }
         }
-        
-        updateEmployeeList();
         updateUI();
         updateStats();
-        updateDailyEntries();
-        
+        updateStorageInfo();
+        showToast('Data loaded successfully', 'success', 2000);
     } catch (error) {
         console.error('Error loading data:', error);
-        showToast('Error loading saved data', 'error');
+        showToast(`Error loading saved data: ${error.message}`, 'error');
+        
+        // Try to recover with default data
+        AppState.employees = [];
+        AppState.dailyEntries = {};
+        AppState.nextId = 1;
     }
 }
 
@@ -316,18 +483,27 @@ function saveData() {
     const data = {
         employees: AppState.employees,
         nextId: AppState.nextId,
-        employeeList: AppState.employeeList,
         dailyEntries: AppState.dailyEntries,
         lastSaved: new Date().toISOString()
     };
     
     try {
         localStorage.setItem('garmentEmployees', JSON.stringify(data));
+        AppState.lastSaveTime = new Date();
         updateStorageInfo();
+        
+        // Show save indicator
+        showToast('Data saved', 'save', 2000);
         return true;
     } catch (error) {
         console.error('Error saving data:', error);
-        showToast('Error saving data', 'error');
+        
+        if (error.name === 'QuotaExceededError') {
+            showToast('Storage is full. Please export and clear some data.', 'error');
+        } else {
+            showToast(`Error saving data: ${error.message}`, 'error');
+        }
+        
         return false;
     }
 }
@@ -345,17 +521,11 @@ function addEmployee(formData) {
         notes: formData.notes || '',
         createdAt: new Date().toISOString(),
         totalHours: calculateTimeDifference(formData.startTime, formData.endTime),
-        netHours: calculateNetHours(formData.startTime, formData.breakTime, formData.endTime)
+        netHours: calculateNetHours(formData.startTime, formData.breakTime, formData.endTime),
+        breakDuration: calculateActualBreakDuration(formData.startTime, formData.breakTime, formData.endTime)
     };
     
-    // Add to employee list if not already there
-    if (!AppState.employeeList.includes(employee.name)) {
-        AppState.employeeList.push(employee.name);
-        AppState.employeeList.sort();
-    }
-    
     AppState.employees.unshift(employee);
-    
     if (saveData()) {
         updateUI();
         updateStats();
@@ -369,6 +539,19 @@ function updateEmployee(id, formData) {
     const index = AppState.employees.findIndex(emp => emp.id === id);
     if (index !== -1) {
         const oldEmployee = AppState.employees[index];
+        
+        // Check for duplicates (excluding current employee)
+        const isDuplicate = AppState.employees.some((emp, idx) => 
+            idx !== index &&
+            emp.name.toLowerCase() === formData.name.toLowerCase().trim() &&
+            emp.date === formData.date
+        );
+        
+        if (isDuplicate) {
+            showToast(`Employee "${formData.name}" already has an entry for ${formatDate(formData.date)}`, 'error');
+            return false;
+        }
+        
         const updatedEmployee = {
             ...oldEmployee,
             name: formData.name.trim(),
@@ -381,23 +564,11 @@ function updateEmployee(id, formData) {
             notes: formData.notes || '',
             totalHours: calculateTimeDifference(formData.startTime, formData.endTime),
             netHours: calculateNetHours(formData.startTime, formData.breakTime, formData.endTime),
+            breakDuration: calculateActualBreakDuration(formData.startTime, formData.breakTime, formData.endTime),
             updatedAt: new Date().toISOString()
         };
         
-        // Update employee list if name changed
-        if (oldEmployee.name !== updatedEmployee.name) {
-            const oldIndex = AppState.employeeList.indexOf(oldEmployee.name);
-            if (oldIndex > -1) {
-                AppState.employeeList.splice(oldIndex, 1);
-            }
-            if (!AppState.employeeList.includes(updatedEmployee.name)) {
-                AppState.employeeList.push(updatedEmployee.name);
-                AppState.employeeList.sort();
-            }
-        }
-        
         AppState.employees[index] = updatedEmployee;
-        
         if (saveData()) {
             updateUI();
             updateStats();
@@ -410,21 +581,13 @@ function updateEmployee(id, formData) {
 }
 
 function deleteEmployee(id) {
-    const index = AppState.employees.findIndex(emp => emp.id === id);
-    if (index !== -1) {
-        const employee = AppState.employees[index];
-        
-        if (confirm(`Delete employee "${employee.name}"? This action cannot be undone.`)) {
+    const employee = AppState.employees.find(emp => emp.id === id);
+    if (!employee) return false;
+    
+    if (confirm(`Are you sure you want to delete employee "${employee.name}"?\nThis action cannot be undone.`)) {
+        const index = AppState.employees.findIndex(emp => emp.id === id);
+        if (index !== -1) {
             AppState.employees.splice(index, 1);
-            
-            // Check if this name is still used by other employees
-            const nameStillUsed = AppState.employees.some(emp => emp.name === employee.name);
-            if (!nameStillUsed) {
-                const nameIndex = AppState.employeeList.indexOf(employee.name);
-                if (nameIndex > -1) {
-                    AppState.employeeList.splice(nameIndex, 1);
-                }
-            }
             
             if (saveData()) {
                 updateUI();
@@ -437,22 +600,122 @@ function deleteEmployee(id) {
     return false;
 }
 
-function updateEmployeeList() {
-    // Extract unique employee names from existing data
-    const uniqueNames = [...new Set(AppState.employees.map(emp => emp.name))];
-    AppState.employeeList = uniqueNames.sort();
+function clearAllData() {
+    if (AppState.employees.length === 0 && Object.keys(AppState.dailyEntries).length === 0) {
+        showToast('No data to clear', 'warning');
+        return;
+    }
+    
+    const employeeCount = AppState.employees.length;
+    const dailyCount = Object.keys(AppState.dailyEntries).length;
+    let message = `Are you sure you want to delete all data?\n\n`;
+    
+    if (employeeCount > 0) message += `• ${employeeCount} employee records\n`;
+    if (dailyCount > 0) message += `• ${dailyCount} days of daily entries\n`;
+    message += `\nThis action cannot be undone.`;
+    
+    if (confirm(message)) {
+        AppState.employees = [];
+        AppState.dailyEntries = {};
+        AppState.nextId = 1;
+        if (saveData()) {
+            updateUI();
+            updateStats();
+            showToast('All data cleared successfully', 'success');
+        }
+    }
+}
+
+function clearDailyEntries() {
+    const today = new Date().toISOString().split('T')[0];
+    const todayEntries = AppState.dailyEntries[today] || {};
+    const entryCount = Object.keys(todayEntries).length;
+    
+    if (entryCount === 0) {
+        showToast('No daily entries for today', 'warning');
+        return;
+    }
+    
+    if (confirm(`Clear ${entryCount} daily entries for ${formatDate(today)}?\nThis action cannot be undone.`)) {
+        delete AppState.dailyEntries[today];
+        if (saveData()) {
+            updateDailyTable();
+            showToast('Today\'s entries cleared successfully', 'success');
+        }
+    }
+}
+
+function importData(file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const data = JSON.parse(e.target.result);
+            
+            // Validate data structure
+            if (!data || typeof data !== 'object') {
+                throw new Error('Invalid file format');
+            }
+            
+            if (!data.employees || !Array.isArray(data.employees)) {
+                throw new Error('Invalid data structure: employees array missing');
+            }
+            
+            // Additional validation
+            const isValidEmployee = (emp) => {
+                return emp && 
+                       typeof emp.name === 'string' &&
+                       typeof emp.type === 'string' &&
+                       !isNaN(parseInt(emp.clothes));
+            };
+            
+            const invalidEmployees = data.employees.filter(emp => !isValidEmployee(emp));
+            if (invalidEmployees.length > 0) {
+                throw new Error(`Found ${invalidEmployees.length} invalid employee records`);
+            }
+            
+            if (confirm(`Import ${data.employees.length} employee records?\nThis will replace all current data.`)) {
+                AppState.employees = data.employees;
+                AppState.nextId = data.nextId || 1;
+                AppState.dailyEntries = data.dailyEntries || {};
+                if (saveData()) {
+                    updateUI();
+                    updateStats();
+                    showToast(`Imported ${data.employees.length} employee records successfully`, 'success');
+                }
+            }
+        } catch (error) {
+            console.error('Import error:', error);
+            showToast(`Error importing data: ${error.message}`, 'error');
+        }
+    };
+    reader.onerror = () => {
+        showToast('Error reading file', 'error');
+    };
+    reader.readAsText(file);
 }
 
 function updateStorageInfo() {
-    const data = localStorage.getItem('garmentEmployees');
-    const size = data ? (data.length / 1024).toFixed(2) : '0';
-    DOM.settingsStorage.textContent = `${size} KB`;
-    
-    const lastBackup = localStorage.getItem('lastBackup');
-    if (lastBackup) {
-        DOM.settingsBackup.textContent = new Date(lastBackup).toLocaleDateString();
-    } else {
-        DOM.settingsBackup.textContent = 'Never';
+    try {
+        const data = localStorage.getItem('garmentEmployees');
+        const size = data ? (data.length / 1024).toFixed(2) : '0';
+        if (DOM.settingsStorage) {
+            DOM.settingsStorage.textContent = `${size} KB`;
+        }
+        
+        const lastBackup = localStorage.getItem('lastBackup');
+        if (lastBackup && DOM.settingsBackup) {
+            DOM.settingsBackup.textContent = formatDateTime(lastBackup);
+        }
+        
+        // Check storage usage
+        const used = JSON.stringify(localStorage).length / 1024;
+        const limit = 5120; // 5MB typical limit
+        
+        if (used > limit * 0.8) {
+            showToast(`Storage is almost full (${(used/limit*100).toFixed(1)}%). Consider exporting data.`, 'warning');
+        }
+    } catch (error) {
+        console.error('Storage info error:', error);
     }
 }
 
@@ -463,7 +726,6 @@ function updateStorageInfo() {
 function editEmployee(id) {
     const employee = AppState.employees.find(emp => emp.id === id);
     if (employee) {
-        // Set form to edit mode
         DOM.editId.value = employee.id;
         DOM.employeeName.value = employee.name;
         DOM.dailyClothes.value = employee.clothes;
@@ -473,20 +735,22 @@ function editEmployee(id) {
         DOM.endTime.value = employee.endTime;
         DOM.notes.value = employee.notes || '';
         
-        // Set employee type radio button
+        // Reset all radio buttons first
         document.querySelectorAll('input[name="employeeType"]').forEach(radio => {
-            radio.checked = radio.value === employee.type;
+            radio.checked = false;
         });
         
-        // Show update button, hide submit button
+        // Check the correct radio button
+        const correctRadio = document.querySelector(`input[name="employeeType"][value="${employee.type}"]`);
+        if (correctRadio) {
+            correctRadio.checked = true;
+        }
+        
         DOM.submitForm.style.display = 'none';
         DOM.updateForm.style.display = 'block';
-        DOM.cancelEdit.style.display = 'block';
+        DOM.cancelEdit.style.display = 'inline-flex';
         
-        // Scroll to form section
         showSection('form');
-        
-        // Update time summary
         updateTimeSummary();
         
         showToast(`Editing ${employee.name}`, 'info');
@@ -498,51 +762,114 @@ function cancelEditMode() {
     DOM.submitForm.style.display = 'block';
     DOM.updateForm.style.display = 'none';
     DOM.cancelEdit.style.display = 'none';
-    DOM.employeeForm.reset();
+    
+    // Properly reset the form including radio buttons
+    if (DOM.employeeForm) {
+        DOM.employeeForm.reset();
+    }
+    
+    // Manually uncheck radio buttons
+    document.querySelectorAll('input[name="employeeType"]').forEach(radio => {
+        radio.checked = false;
+    });
+    
     updateForm();
+    showToast('Edit cancelled', 'info');
 }
 
 // ============================================
-// Daily Entry System
+// Daily Entry System - COMPLETELY FIXED
 // ============================================
 
 function initDailyEntry() {
-    // Set today's date
     const today = new Date().toISOString().split('T')[0];
-    DOM.todayDate.textContent = formatDate(today);
-    DOM.dailyDate.value = today;
+    if (DOM.todayDate) {
+        DOM.todayDate.textContent = formatDate(today);
+    }
+    if (DOM.dailyDate) {
+        DOM.dailyDate.value = today;
+        DOM.dailyDate.max = today;
+        
+        // Add event listener for date change
+        DOM.dailyDate.addEventListener('change', handleDailyDateChange);
+    }
     AppState.selectedDate = today;
     
-    updateDailyEntries();
+    // Initialize daily entries for today if not exists
+    if (!AppState.dailyEntries[today]) {
+        AppState.dailyEntries[today] = {};
+    }
+    
+    loadDailyEntries();
+    createDailyModal();
 }
 
-function updateDailyEntries() {
-    const date = DOM.dailyDate.value || AppState.selectedDate;
+function handleDailyDateChange() {
+    AppState.selectedDate = DOM.dailyDate.value;
+    loadDailyEntries();
+}
+
+function loadDailyEntries() {
+    const date = DOM.dailyDate ? DOM.dailyDate.value : AppState.selectedDate;
     if (!date) return;
     
-    // Get or create daily entries for this date
+    // Ensure data structure exists for this date
     if (!AppState.dailyEntries[date]) {
         AppState.dailyEntries[date] = {};
     }
     
     updateDailyTable();
-    updateDailyStats();
 }
 
+// FIXED: Daily table now correctly displays ALL unique employees
 function updateDailyTable() {
-    const date = DOM.dailyDate.value || AppState.selectedDate;
+    const date = DOM.dailyDate ? DOM.dailyDate.value : AppState.selectedDate;
     const dailyData = AppState.dailyEntries[date] || {};
     
-    if (AppState.employeeList.length === 0) {
-        DOM.dailyEmpty.classList.add('show');
-        DOM.dailyTableBody.innerHTML = '';
+    // FIX: Get ALL unique employee names from AppState.employees
+    const allEmployees = [];
+    AppState.employees.forEach(emp => {
+        if (!allEmployees.includes(emp.name)) {
+            allEmployees.push(emp.name);
+        }
+    });
+    
+    // Sort alphabetically
+    allEmployees.sort();
+    
+    // Update "Add All" button state
+    if (DOM.addAllToday) {
+        if (allEmployees.length === 0) {
+            DOM.addAllToday.disabled = true;
+            DOM.addAllToday.title = 'No employees available';
+        } else {
+            DOM.addAllToday.disabled = false;
+            DOM.addAllToday.title = `Add all ${allEmployees.length} employees`;
+        }
+    }
+    
+    // Update total employees count
+    if (DOM.totalEmployees) {
+        DOM.totalEmployees.textContent = allEmployees.length;
+    }
+    
+    if (allEmployees.length === 0) {
+        if (DOM.dailyEmpty) {
+            DOM.dailyEmpty.classList.add('show');
+        }
+        if (DOM.dailyTableBody) {
+            DOM.dailyTableBody.innerHTML = '';
+        }
+        updateDailyStats();
         return;
     }
     
-    DOM.dailyEmpty.classList.remove('show');
+    if (DOM.dailyEmpty) {
+        DOM.dailyEmpty.classList.remove('show');
+    }
     
     let html = '';
-    AppState.employeeList.forEach(employeeName => {
+    allEmployees.forEach(employeeName => {
         const entry = dailyData[employeeName] || {
             clothes: 0,
             startTime: '09:00',
@@ -552,51 +879,43 @@ function updateDailyTable() {
         };
         
         const netHours = calculateNetHours(entry.startTime, entry.breakTime, entry.endTime);
-        const employee = AppState.employees.find(emp => emp.name === employeeName);
-        const type = employee ? employee.type : 'weekly';
-        const typeColor = type === 'weekly' ? 'var(--weekly-color)' : 'var(--monthly-color)';
+        const breakDuration = calculateActualBreakDuration(entry.startTime, entry.breakTime, entry.endTime);
         
         html += `
             <tr>
                 <td>
                     <div class="employee-info">
                         <strong>${employeeName}</strong>
-                        ${entry.notes ? `<small>${entry.notes}</small>` : ''}
                     </div>
                 </td>
                 <td>
-                    <span class="badge" style="background: ${typeColor}">${type.charAt(0).toUpperCase() + type.slice(1)}</span>
+                    <span class="badge ${getEmployeeTypeClass(employeeName)}">${getEmployeeType(employeeName)}</span>
                 </td>
                 <td>
-                    <input type="number" class="daily-input garments-input" 
+                    <input type="number" class="daily-input" 
                            value="${entry.clothes}" 
                            min="0" 
                            data-employee="${employeeName}"
                            placeholder="0"
-                           onchange="updateDailyGarment('${employeeName}', this.value)">
-                </td>
-                <td class="time-cell">
-                    <input type="time" class="daily-input time-input start-time" 
-                           value="${entry.startTime}"
-                           data-employee="${employeeName}"
-                           data-type="startTime"
-                           onchange="updateDailyTime('${employeeName}', 'startTime', this.value)">
-                    <small>to</small>
-                    <input type="time" class="daily-input time-input end-time" 
-                           value="${entry.endTime}"
-                           data-employee="${employeeName}"
-                           data-type="endTime"
-                           onchange="updateDailyTime('${employeeName}', 'endTime', this.value)">
+                           aria-label="Garments for ${employeeName}">
                 </td>
                 <td>
-                    <span class="text-primary" style="font-weight: 600;">${formatHours(netHours)}h</span>
+                    <div class="time-cell">
+                        <small>${formatTime(entry.startTime)} - ${formatTime(entry.endTime)}</small>
+                        <div>Break: ${formatTime(entry.breakTime)} (${formatHours(breakDuration)}h)</div>
+                    </div>
+                </td>
+                <td>
+                    <span class="text-primary">${formatHours(netHours)}h</span>
                 </td>
                 <td>
                     <div class="actions">
-                        <button class="action-btn edit" onclick="editDailyEntry('${employeeName}')" title="Edit Notes">
-                            <i class="fas fa-edit"></i>
+                        <button class="action-btn edit" onclick="openDailyModal('${employeeName.replace(/'/g, "\\'")}')" 
+                                title="Edit Times" aria-label="Edit times for ${employeeName}">
+                            <i class="fas fa-clock"></i>
                         </button>
-                        <button class="action-btn delete" onclick="removeDailyEntry('${employeeName}')" title="Remove">
+                        <button class="action-btn delete" onclick="removeDailyEntry('${employeeName.replace(/'/g, "\\'")}')" 
+                                title="Remove" aria-label="Remove ${employeeName}">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
@@ -605,90 +924,181 @@ function updateDailyTable() {
         `;
     });
     
-    DOM.dailyTableBody.innerHTML = html;
-    
-    // Update today's count in navigation
-    const today = new Date().toISOString().split('T')[0];
-    const todayEntries = Object.keys(AppState.dailyEntries[today] || {}).length;
-    DOM.navDaily.textContent = todayEntries;
-    DOM.totalEmployees.textContent = AppState.employeeList.length;
-}
-
-function updateDailyGarment(employeeName, clothes) {
-    const date = DOM.dailyDate.value || AppState.selectedDate;
-    if (!AppState.dailyEntries[date]) {
-        AppState.dailyEntries[date] = {};
+    if (DOM.dailyTableBody) {
+        DOM.dailyTableBody.innerHTML = html;
     }
     
-    if (!AppState.dailyEntries[date][employeeName]) {
-        AppState.dailyEntries[date][employeeName] = {
-            clothes: 0,
-            startTime: '09:00',
-            breakTime: '13:00',
-            endTime: '17:00',
-            notes: ''
-        };
-    }
-    
-    AppState.dailyEntries[date][employeeName].clothes = parseInt(clothes) || 0;
-    saveData();
-    updateDailyStats();
-    
-    // Show toast for non-zero entries
-    if (clothes > 0) {
-        showToast(`Updated garments for ${employeeName}: ${clothes}`, 'info');
-    }
-}
-
-function updateDailyTime(employeeName, timeType, timeValue) {
-    const date = DOM.dailyDate.value || AppState.selectedDate;
-    if (!AppState.dailyEntries[date]) {
-        AppState.dailyEntries[date] = {};
-    }
-    
-    if (!AppState.dailyEntries[date][employeeName]) {
-        AppState.dailyEntries[date][employeeName] = {
-            clothes: 0,
-            startTime: '09:00',
-            breakTime: '13:00',
-            endTime: '17:00',
-            notes: ''
-        };
-    }
-    
-    AppState.dailyEntries[date][employeeName][timeType] = timeValue;
-    
-    // Auto-set break time if it's not between start and end times
-    if (timeType === 'startTime' || timeType === 'endTime') {
-        const entry = AppState.dailyEntries[date][employeeName];
-        const start = new Date(`2000-01-01T${entry.startTime}`);
-        const end = new Date(`2000-01-01T${entry.endTime}`);
-        const breakTime = new Date(`2000-01-01T${entry.breakTime}`);
+    // Add input change listeners
+    document.querySelectorAll('.daily-input').forEach(input => {
+        input.addEventListener('change', function() {
+            const employeeName = this.getAttribute('data-employee');
+            const clothes = parseInt(this.value) || 0;
+            saveDailyGarment(employeeName, clothes);
+        });
         
-        // If break time is not between start and end, set it to middle
-        if (breakTime < start || breakTime > end) {
-            const middle = new Date((start.getTime() + end.getTime()) / 2);
-            const hours = middle.getHours().toString().padStart(2, '0');
-            const minutes = middle.getMinutes().toString().padStart(2, '0');
-            entry.breakTime = `${hours}:${minutes}`;
-            
-            // Update the break time input if it exists
-            const breakInput = document.querySelector(`input[data-employee="${employeeName}"][data-type="breakTime"]`);
-            if (breakInput) {
-                breakInput.value = entry.breakTime;
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                this.blur();
             }
-        }
-    }
+        });
+    });
     
-    saveData();
     updateDailyStats();
-    updateDailyTable(); // Refresh to show updated hours
-    
-    showToast(`Updated ${timeType} for ${employeeName}`, 'info');
 }
 
-function editDailyEntry(employeeName) {
-    const date = DOM.dailyDate.value || AppState.selectedDate;
+function getEmployeeType(employeeName) {
+    const employee = AppState.employees.find(emp => emp.name === employeeName);
+    return employee ? employee.type.charAt(0).toUpperCase() + employee.type.slice(1) : 'Unknown';
+}
+
+function getEmployeeTypeClass(employeeName) {
+    const employee = AppState.employees.find(emp => emp.name === employeeName);
+    if (!employee) return '';
+    return employee.type === 'weekly' ? 'weekly-badge' : 
+           employee.type === 'monthly' ? 'monthly-badge' : '';
+}
+
+function updateDailyStats() {
+    const date = DOM.dailyDate ? DOM.dailyDate.value : AppState.selectedDate;
+    const dailyData = AppState.dailyEntries[date] || {};
+    
+    // FIX: Use all employees count
+    const allEmployees = [];
+    AppState.employees.forEach(emp => {
+        if (!allEmployees.includes(emp.name)) {
+            allEmployees.push(emp.name);
+        }
+    });
+    const totalEmployees = allEmployees.length;
+    
+    let activeCount = 0;
+    let totalGarments = 0;
+    let totalHours = 0;
+    let totalBreakHours = 0;
+    
+    Object.values(dailyData).forEach(entry => {
+        if (entry.clothes > 0) {
+            activeCount++;
+            totalGarments += entry.clothes;
+            totalHours += calculateNetHours(entry.startTime, entry.breakTime, entry.endTime);
+            totalBreakHours += calculateActualBreakDuration(entry.startTime, entry.breakTime, entry.endTime);
+        }
+    });
+    
+    const avgGarments = activeCount > 0 ? (totalGarments / activeCount).toFixed(1) : '0';
+    const efficiency = totalHours > 0 ? (totalGarments / totalHours).toFixed(2) : '0';
+    
+    if (DOM.totalEmployees) DOM.totalEmployees.textContent = totalEmployees;
+    if (DOM.dailyActive) DOM.dailyActive.textContent = activeCount;
+    if (DOM.dailyGarments) DOM.dailyGarments.textContent = totalGarments;
+    if (DOM.dailyHours) DOM.dailyHours.textContent = formatHours(totalHours);
+    if (DOM.dailyAvg) DOM.dailyAvg.textContent = avgGarments;
+    
+    // Update footer efficiency
+    if (DOM.footerEfficiency) {
+        DOM.footerEfficiency.textContent = efficiency;
+    }
+    
+    if (DOM.navDaily) {
+        DOM.navDaily.textContent = activeCount;
+    }
+}
+
+function saveDailyGarment(employeeName, clothes) {
+    const date = DOM.dailyDate ? DOM.dailyDate.value : AppState.selectedDate;
+    if (!date) return;
+    
+    if (!AppState.dailyEntries[date]) {
+        AppState.dailyEntries[date] = {};
+    }
+    
+    if (!AppState.dailyEntries[date][employeeName]) {
+        AppState.dailyEntries[date][employeeName] = {
+            clothes: 0,
+            startTime: '09:00',
+            breakTime: '13:00',
+            endTime: '17:00',
+            notes: ''
+        };
+    }
+    
+    AppState.dailyEntries[date][employeeName].clothes = clothes;
+    saveData();
+    updateDailyStats();
+}
+
+// Daily Modal Functions
+function createDailyModal() {
+    if (document.getElementById('dailyTimeModal')) return;
+    
+    const modalHTML = `
+        <div id="dailyTimeModal" class="modal" aria-hidden="true">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-clock"></i> Edit Daily Time</h3>
+                    <button class="modal-close" onclick="closeDailyModal()" aria-label="Close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="modal-employee-info">
+                        <h4 id="modalEmployeeName"></h4>
+                    </div>
+                    <div class="input-group">
+                        <label for="modalGarments">
+                            <i class="fas fa-tshirt"></i> Garments Produced
+                        </label>
+                        <input type="number" id="modalGarments" min="0" placeholder="Number of garments">
+                    </div>
+                    <div class="time-inputs">
+                        <div class="time-input-group">
+                            <label for="modalStartTime">Start Time</label>
+                            <input type="time" id="modalStartTime">
+                        </div>
+                        <div class="time-input-group">
+                            <label for="modalBreakTime">Lunch Break</label>
+                            <input type="time" id="modalBreakTime">
+                        </div>
+                        <div class="time-input-group">
+                            <label for="modalEndTime">End Time</label>
+                            <input type="time" id="modalEndTime">
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label for="modalNotes">
+                            <i class="fas fa-sticky-note"></i> Notes
+                        </label>
+                        <textarea id="modalNotes" rows="3" placeholder="Add notes..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="closeDailyModal()">Cancel</button>
+                    <button class="btn btn-primary" onclick="saveDailyEntry()">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    const modal = document.getElementById('dailyTimeModal');
+    modal.addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeDailyModal();
+        }
+    });
+    
+    // Add keyboard navigation
+    modal.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeDailyModal();
+        }
+        if (e.key === 'Enter' && e.ctrlKey) {
+            saveDailyEntry();
+        }
+    });
+}
+
+function openDailyModal(employeeName) {
+    const date = DOM.dailyDate ? DOM.dailyDate.value : AppState.selectedDate;
     const entry = AppState.dailyEntries[date]?.[employeeName] || {
         clothes: 0,
         startTime: '09:00',
@@ -697,98 +1107,123 @@ function editDailyEntry(employeeName) {
         notes: ''
     };
     
-    const notes = prompt(`Enter notes for ${employeeName}:`, entry.notes || '');
-    if (notes !== null) {
-        entry.notes = notes.trim();
-        saveData();
-        updateDailyTable();
-        showToast(`Notes updated for ${employeeName}`, 'success');
-    }
+    AppState.editingDailyId = employeeName;
+    
+    document.getElementById('modalEmployeeName').textContent = employeeName;
+    document.getElementById('modalGarments').value = entry.clothes;
+    document.getElementById('modalStartTime').value = entry.startTime;
+    document.getElementById('modalBreakTime').value = entry.breakTime;
+    document.getElementById('modalEndTime').value = entry.endTime;
+    document.getElementById('modalNotes').value = entry.notes || '';
+    
+    const modal = document.getElementById('dailyTimeModal');
+    modal.style.display = 'block';
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    
+    // Focus first input
+    setTimeout(() => {
+        document.getElementById('modalGarments').focus();
+    }, 100);
 }
 
-function removeDailyEntry(employeeName) {
-    const date = DOM.dailyDate.value || AppState.selectedDate;
+function saveDailyEntry() {
+    if (!AppState.editingDailyId) return;
     
-    if (confirm(`Remove ${employeeName} from today's entries?`)) {
-        if (AppState.dailyEntries[date]) {
-            delete AppState.dailyEntries[date][employeeName];
-            
-            // If no entries left for this date, remove the date
-            if (Object.keys(AppState.dailyEntries[date]).length === 0) {
-                delete AppState.dailyEntries[date];
-            }
-            
-            saveData();
-            updateDailyTable();
-            updateDailyStats();
-            showToast(`Removed ${employeeName} from today's entries`, 'success');
-        }
-    }
-}
-
-function updateDailyStats() {
-    const date = DOM.dailyDate.value || AppState.selectedDate;
-    const dailyData = AppState.dailyEntries[date] || {};
+    const date = DOM.dailyDate ? DOM.dailyDate.value : AppState.selectedDate;
+    if (!date) return;
     
-    let activeCount = 0;
-    let totalGarments = 0;
-    let totalHours = 0;
+    const modalGarments = document.getElementById('modalGarments');
+    const modalStartTime = document.getElementById('modalStartTime');
+    const modalBreakTime = document.getElementById('modalBreakTime');
+    const modalEndTime = document.getElementById('modalEndTime');
+    const modalNotes = document.getElementById('modalNotes');
     
-    Object.values(dailyData).forEach(entry => {
-        if (entry.clothes > 0) {
-            activeCount++;
-            totalGarments += entry.clothes;
-            totalHours += calculateNetHours(entry.startTime, entry.breakTime, entry.endTime);
-        }
-    });
-    
-    DOM.dailyActive.textContent = activeCount;
-    DOM.dailyGarments.textContent = totalGarments;
-    DOM.dailyHours.textContent = formatHours(totalHours);
-    DOM.dailyAvg.textContent = activeCount > 0 ? Math.round(totalGarments / activeCount) : '0';
-}
-
-function addAllToday() {
-    const date = DOM.dailyDate.value || AppState.selectedDate;
-    
-    if (AppState.employeeList.length === 0) {
-        showToast('No employees added yet. Add employees first.', 'warning');
+    // Validate times
+    if (modalStartTime.value && modalEndTime.value && modalEndTime.value <= modalStartTime.value) {
+        showToast('End time must be after start time', 'error');
         return;
     }
     
-    // Clear existing entries for this date
-    AppState.dailyEntries[date] = {};
+    if (!AppState.dailyEntries[date]) {
+        AppState.dailyEntries[date] = {};
+    }
     
-    // Add all employees with default values
-    AppState.employeeList.forEach(employeeName => {
-        AppState.dailyEntries[date][employeeName] = {
-            clothes: 0,
-            startTime: '09:00',
-            breakTime: '13:00',
-            endTime: '17:00',
-            notes: ''
-        };
-    });
+    AppState.dailyEntries[date][AppState.editingDailyId] = {
+        clothes: parseInt(modalGarments.value) || 0,
+        startTime: modalStartTime.value,
+        breakTime: modalBreakTime.value,
+        endTime: modalEndTime.value,
+        notes: modalNotes.value
+    };
     
     saveData();
     updateDailyTable();
-    showToast(`Added all ${AppState.employeeList.length} employees for today`, 'success');
+    closeDailyModal();
+    
+    showToast(`Daily entry saved for ${AppState.editingDailyId}`, 'success');
+}
+
+function removeDailyEntry(employeeName) {
+    const date = DOM.dailyDate ? DOM.dailyDate.value : AppState.selectedDate;
+    const entry = AppState.dailyEntries[date]?.[employeeName];
+    
+    if (!entry) {
+        showToast('Entry not found', 'warning');
+        return;
+    }
+    
+    if (confirm(`Remove daily entry for ${employeeName}?\nGarments: ${entry.clothes}`)) {
+        delete AppState.dailyEntries[date][employeeName];
+        
+        if (Object.keys(AppState.dailyEntries[date]).length === 0) {
+            delete AppState.dailyEntries[date];
+        }
+        
+        saveData();
+        updateDailyTable();
+        showToast(`Entry removed for ${employeeName}`, 'success');
+    }
+}
+
+function closeDailyModal() {
+    const modal = document.getElementById('dailyTimeModal');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.setAttribute('aria-hidden', 'true');
+    }
+    document.body.style.overflow = '';
+    AppState.editingDailyId = null;
 }
 
 function saveAllDailyEntries() {
-    const date = DOM.dailyDate.value || AppState.selectedDate;
+    const date = DOM.dailyDate ? DOM.dailyDate.value : AppState.selectedDate;
     const dailyData = AppState.dailyEntries[date] || {};
     
+    if (Object.keys(dailyData).length === 0) {
+        showToast('No daily entries to save', 'warning');
+        return;
+    }
+    
     let entriesAdded = 0;
+    let skippedEntries = 0;
     
     Object.keys(dailyData).forEach(employeeName => {
         const entry = dailyData[employeeName];
         if (entry.clothes > 0) {
-            // Find employee type from existing records or default to weekly
             const employee = AppState.employees.find(emp => emp.name === employeeName);
             const type = employee ? employee.type : 'weekly';
             
-            // Create new employee entry
+            // Check if entry already exists for this date
+            const existingEntry = AppState.employees.find(emp => 
+                emp.name === employeeName && emp.date === date
+            );
+            
+            if (existingEntry) {
+                skippedEntries++;
+                return;
+            }
+            
             const newEntry = {
                 id: generateId(),
                 name: employeeName,
@@ -801,7 +1236,8 @@ function saveAllDailyEntries() {
                 notes: entry.notes || '',
                 createdAt: new Date().toISOString(),
                 totalHours: calculateTimeDifference(entry.startTime, entry.endTime),
-                netHours: calculateNetHours(entry.startTime, entry.breakTime, entry.endTime)
+                netHours: calculateNetHours(entry.startTime, entry.breakTime, entry.endTime),
+                breakDuration: calculateActualBreakDuration(entry.startTime, entry.breakTime, entry.endTime)
             };
             
             AppState.employees.unshift(newEntry);
@@ -810,144 +1246,311 @@ function saveAllDailyEntries() {
     });
     
     if (entriesAdded > 0) {
-        // Clear daily entries for this date after saving
         delete AppState.dailyEntries[date];
         
         if (saveData()) {
             updateUI();
             updateStats();
-            showToast(`${entriesAdded} daily entries saved as permanent records`, 'success');
-            
-            // Clear the daily table
-            updateDailyTable();
-            updateDailyStats();
+            let message = `${entriesAdded} daily entries saved successfully`;
+            if (skippedEntries > 0) {
+                message += ` (${skippedEntries} duplicates skipped)`;
+            }
+            showToast(message, 'success');
         }
+    } else if (skippedEntries > 0) {
+        showToast(`All entries already exist in records (${skippedEntries} found)`, 'warning');
     } else {
-        showToast('No valid entries to save. Enter garment counts first.', 'warning');
+        showToast('No valid entries to save (garments must be > 0)', 'warning');
     }
 }
 
-function clearDailyEntries() {
-    const date = DOM.dailyDate.value || AppState.selectedDate;
+function addAllToday() {
+    const date = DOM.dailyDate ? DOM.dailyDate.value : AppState.selectedDate;
     
-    if (confirm(`Clear all entries for ${formatDate(date)}? This cannot be undone.`)) {
-        delete AppState.dailyEntries[date];
-        saveData();
-        updateDailyTable();
-        updateDailyStats();
-        showToast('Daily entries cleared successfully', 'success');
+    // FIX: Get ALL unique employee names
+    const allEmployees = [];
+    AppState.employees.forEach(emp => {
+        if (!allEmployees.includes(emp.name)) {
+            allEmployees.push(emp.name);
+        }
+    });
+    
+    if (allEmployees.length === 0) {
+        showToast('No employees available to add', 'warning');
+        return;
     }
+    
+    AppState.dailyEntries[date] = {};
+    
+    allEmployees.forEach(employeeName => {
+        const employee = AppState.employees.find(emp => emp.name === employeeName);
+        AppState.dailyEntries[date][employeeName] = {
+            clothes: 0,
+            startTime: employee?.startTime || '09:00',
+            breakTime: employee?.breakTime || '13:00',
+            endTime: employee?.endTime || '17:00',
+            notes: employee?.notes || ''
+        };
+    });
+    
+    saveData();
+    updateDailyTable();
+    showToast(`Added all ${allEmployees.length} employees for ${formatDate(date)}`, 'success');
 }
 
 // ============================================
-// Export Functions
+// Export Functions - COMPLETELY FIXED
 // ============================================
 
-function exportDailyToExcel() {
+// FIXED: Export dropdown functionality
+function toggleDailyExportMenu() {
+    if (!DOM.dailyExportMenu) return;
+    
+    const isShowing = DOM.dailyExportMenu.classList.contains('show');
+    DOM.dailyExportMenu.classList.toggle('show');
+    
+    // Update aria-expanded
+    if (DOM.dailyExportButton) {
+        DOM.dailyExportButton.setAttribute('aria-expanded', isShowing ? 'false' : 'true');
+    }
+    
+    if (!isShowing) {
+        // Add click outside listener
+        setTimeout(() => {
+            document.addEventListener('click', closeExportMenuOnClickOutside);
+        }, 10);
+    } else {
+        // Remove listener if closing
+        document.removeEventListener('click', closeExportMenuOnClickOutside);
+    }
+}
+
+function closeExportMenuOnClickOutside(e) {
+    if (DOM.dailyExportMenu && !DOM.dailyExportMenu.contains(e.target)) {
+        if (DOM.dailyExportButton && !DOM.dailyExportButton.contains(e.target)) {
+            DOM.dailyExportMenu.classList.remove('show');
+            if (DOM.dailyExportButton) {
+                DOM.dailyExportButton.setAttribute('aria-expanded', 'false');
+            }
+            document.removeEventListener('click', closeExportMenuOnClickOutside);
+        }
+    }
+}
+
+function exportDailyToPDF() {
     try {
-        const date = DOM.dailyDate.value || AppState.selectedDate;
+        const date = DOM.dailyDate ? DOM.dailyDate.value : AppState.selectedDate;
         const dailyData = AppState.dailyEntries[date] || {};
         
         if (Object.keys(dailyData).length === 0) {
-            showToast('No daily entries to export', 'warning');
+            showToast('No daily data to export', 'warning');
+            return;
+        }
+        
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('p', 'mm', 'a4');
+        const pageWidth = doc.internal.pageSize.width;
+        
+        // Header
+        doc.setFillColor(37, 99, 235);
+        doc.rect(0, 0, pageWidth, 25, 'F');
+        
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.text('DAILY PRODUCTION REPORT', pageWidth / 2, 15, { align: 'center' });
+        
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Date: ${formatDate(date)}`, pageWidth / 2, 22, { align: 'center' });
+        
+        let yPos = 35;
+        
+        // Summary
+        let activeCount = 0;
+        let totalGarments = 0;
+        let totalHours = 0;
+        let totalBreakHours = 0;
+        
+        const tableData = [];
+        Object.keys(dailyData).forEach(employeeName => {
+            const entry = dailyData[employeeName];
+            const netHours = calculateNetHours(entry.startTime, entry.breakTime, entry.endTime);
+            const breakHours = calculateActualBreakDuration(entry.startTime, entry.breakTime, entry.endTime);
+            
+            if (entry.clothes > 0) {
+                activeCount++;
+                totalGarments += entry.clothes;
+                totalHours += netHours;
+                totalBreakHours += breakHours;
+            }
+            
+            tableData.push([
+                employeeName.substring(0, 20),
+                getEmployeeType(employeeName),
+                entry.clothes.toString(),
+                `${formatTime(entry.startTime)} - ${formatTime(entry.endTime)}`,
+                formatHours(netHours),
+                formatHours(breakHours)
+            ]);
+        });
+        
+        // Daily Summary
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Daily Summary:', 10, yPos);
+        
+        yPos += 8;
+        
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Date: ${formatDate(date)}`, 10, yPos);
+        doc.text(`Total Employees: ${Object.keys(dailyData).length}`, 70, yPos);
+        doc.text(`Active Employees: ${activeCount}`, 130, yPos);
+        
+        yPos += 6;
+        doc.text(`Total Garments: ${totalGarments}`, 10, yPos);
+        doc.text(`Total Hours: ${formatHours(totalHours)}`, 70, yPos);
+        doc.text(`Total Break: ${formatHours(totalBreakHours)}`, 130, yPos);
+        
+        yPos += 10;
+        
+        // Daily Table with dynamic column widths
+        if (tableData.length > 0) {
+            doc.autoTable({
+                head: [['Employee', 'Type', 'Garments', 'Time', 'Hours', 'Break']],
+                body: tableData,
+                startY: yPos,
+                theme: 'grid',
+                headStyles: {
+                    fillColor: [37, 99, 235],
+                    textColor: 255,
+                    fontStyle: 'bold',
+                    fontSize: 8
+                },
+                bodyStyles: {
+                    fontSize: 7,
+                    cellPadding: 2,
+                    overflow: 'linebreak'
+                },
+                margin: { left: 10, right: 10 },
+                styles: {
+                    fontSize: 7,
+                    cellPadding: 2,
+                    lineWidth: 0.1
+                },
+                columnStyles: {
+                    0: { cellWidth: 35 },
+                    1: { cellWidth: 20 },
+                    2: { cellWidth: 20 },
+                    3: { cellWidth: 40 },
+                    4: { cellWidth: 20 },
+                    5: { cellWidth: 20 }
+                }
+            });
+        }
+        
+        // Footer
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(7);
+            doc.setTextColor(100, 116, 139);
+            doc.text(`Page ${i} of ${pageCount}`, pageWidth / 2, 290, { align: 'center' });
+            doc.text('Generated by Garment Management System', pageWidth / 2, 295, { align: 'center' });
+        }
+        
+        // Save PDF
+        const fileName = `Daily_Report_${date.replace(/-/g, '_')}.pdf`;
+        doc.save(fileName);
+        
+        showToast('Daily PDF report generated successfully!', 'success');
+        
+    } catch (error) {
+        console.error('Daily PDF Export Error:', error);
+        showToast(`Error generating daily PDF: ${error.message}`, 'error');
+    }
+}
+
+function exportDailyToExcel() {
+    try {
+        const date = DOM.dailyDate ? DOM.dailyDate.value : AppState.selectedDate;
+        const dailyData = AppState.dailyEntries[date] || {};
+        
+        if (Object.keys(dailyData).length === 0) {
+            showToast('No daily data to export', 'warning');
             return;
         }
         
         const wb = XLSX.utils.book_new();
         wb.Props = {
             Title: "Daily Production Report",
-            Subject: `Daily Production Data - ${date}`,
-            Author: "Garment Pro Management System",
+            Subject: "Daily Employee Data",
+            Author: "Garment Management System",
             CreatedDate: new Date()
         };
         
-        // Summary data
-        let activeCount = 0;
-        let totalGarments = 0;
-        let totalHours = 0;
-        
-        Object.values(dailyData).forEach(entry => {
-            if (entry.clothes > 0) {
-                activeCount++;
-                totalGarments += entry.clothes;
-                totalHours += calculateNetHours(entry.startTime, entry.breakTime, entry.endTime);
-            }
-        });
-        
-        const summaryData = [
+        const dailyDataArray = [
             ['DAILY PRODUCTION REPORT'],
             [`Date: ${formatDate(date)}`],
-            [`Total Employees: ${AppState.employeeList.length}`],
-            [`Working Today: ${activeCount}`],
-            [`Total Garments: ${totalGarments}`],
-            [`Total Hours: ${formatHours(totalHours)}`],
-            [`Average per Employee: ${activeCount > 0 ? Math.round(totalGarments / activeCount) : 0}`],
+            [`Generated: ${new Date().toLocaleString()}`],
             [''],
-            ['EMPLOYEE DETAILS']
+            ['Employee', 'Type', 'Garments', 'Start Time', 'Break Time', 'End Time', 'Net Hours', 'Break Hours', 'Notes']
         ];
         
-        const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
-        
-        // Merge title cells
-        wsSummary['!merges'] = [
-            { s: { r: 0, c: 0 }, e: { r: 0, c: 5 } },
-            { s: { r: 1, c: 0 }, e: { r: 1, c: 5 } },
-            { s: { r: 8, c: 0 }, e: { r: 8, c: 5 } }
-        ];
-        
-        // Main data sheet
-        const data = [
-            ['Employee', 'Type', 'Garments', 'Start Time', 'Break Time', 'End Time', 'Net Hours', 'Notes']
-        ];
+        let totalGarments = 0;
+        let totalHours = 0;
+        let totalBreakHours = 0;
         
         Object.keys(dailyData).forEach(employeeName => {
             const entry = dailyData[employeeName];
-            if (entry.clothes > 0) {
-                const employee = AppState.employees.find(emp => emp.name === employeeName);
-                const type = employee ? employee.type.charAt(0).toUpperCase() + employee.type.slice(1) : 'Weekly';
-                const netHours = calculateNetHours(entry.startTime, entry.breakTime, entry.endTime);
-                
-                data.push([
-                    employeeName,
-                    type,
-                    entry.clothes,
-                    formatTime(entry.startTime),
-                    formatTime(entry.breakTime),
-                    formatTime(entry.endTime),
-                    parseFloat(netHours.toFixed(2)),
-                    entry.notes || ''
-                ]);
-            }
+            const netHours = calculateNetHours(entry.startTime, entry.breakTime, entry.endTime);
+            const breakHours = calculateActualBreakDuration(entry.startTime, entry.breakTime, entry.endTime);
+            
+            totalGarments += entry.clothes;
+            totalHours += netHours;
+            totalBreakHours += breakHours;
+            
+            dailyDataArray.push([
+                employeeName,
+                getEmployeeType(employeeName),
+                entry.clothes,
+                formatTime(entry.startTime),
+                formatTime(entry.breakTime),
+                formatTime(entry.endTime),
+                parseFloat(netHours.toFixed(2)),
+                parseFloat(breakHours.toFixed(2)),
+                entry.notes || ''
+            ]);
         });
         
-        // Add summary at the end
-        data.push(['']);
-        data.push(['SUMMARY']);
-        data.push(['Working Today', activeCount]);
-        data.push(['Total Garments', totalGarments]);
-        data.push(['Total Hours', parseFloat(totalHours.toFixed(2))]);
-        data.push(['Average per Employee', activeCount > 0 ? parseFloat((totalGarments / activeCount).toFixed(1)) : 0]);
-        data.push(['Efficiency (Garments/Hour)', totalHours > 0 ? parseFloat((totalGarments / totalHours).toFixed(2)) : 0]);
+        dailyDataArray.push(['']);
+        dailyDataArray.push(['SUMMARY']);
+        dailyDataArray.push(['Total Employees', Object.keys(dailyData).length]);
+        dailyDataArray.push(['Active Employees', Object.values(dailyData).filter(e => e.clothes > 0).length]);
+        dailyDataArray.push(['Total Garments', totalGarments]);
+        dailyDataArray.push(['Total Hours', parseFloat(totalHours.toFixed(2))]);
+        dailyDataArray.push(['Total Break Hours', parseFloat(totalBreakHours.toFixed(2))]);
+        dailyDataArray.push(['Efficiency (Garments/Hour)', totalHours > 0 ? parseFloat((totalGarments / totalHours).toFixed(2)) : 0]);
         
-        const wsData = XLSX.utils.aoa_to_sheet(data);
+        const wsDaily = XLSX.utils.aoa_to_sheet(dailyDataArray);
         
-        // Set column widths
-        wsData['!cols'] = [
-            { wch: 25 }, // Employee
-            { wch: 15 }, // Type
-            { wch: 12 }, // Garments
-            { wch: 15 }, // Start Time
-            { wch: 15 }, // Break Time
-            { wch: 15 }, // End Time
-            { wch: 12 }, // Net Hours
-            { wch: 30 }  // Notes
-        ];
+        // Auto-size columns
+        const colWidths = dailyDataArray.reduce((widths, row) => {
+            row.forEach((cell, colIndex) => {
+                const length = cell ? cell.toString().length : 0;
+                if (!widths[colIndex] || length > widths[colIndex]) {
+                    widths[colIndex] = length;
+                }
+            });
+            return widths;
+        }, []);
         
-        // Add sheets to workbook
-        XLSX.utils.book_append_sheet(wb, wsSummary, "Report Summary");
-        XLSX.utils.book_append_sheet(wb, wsData, "Daily Entries");
+        wsDaily['!cols'] = colWidths.map(width => ({ wch: Math.min(width + 2, 50) }));
         
-        // Save Excel file
+        XLSX.utils.book_append_sheet(wb, wsDaily, "Daily Report");
+        
         const fileName = `Daily_Report_${date.replace(/-/g, '_')}.xlsx`;
         XLSX.writeFile(wb, fileName);
         
@@ -967,437 +1570,176 @@ function exportToPDF() {
         }
         
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF('landscape', 'mm', 'a4');
+        const doc = new jsPDF('p', 'mm', 'a4');
+        const pageWidth = doc.internal.pageSize.width;
         
-        // Page dimensions
-        const pageWidth = 297; // A4 landscape width
-        const pageHeight = 210; // A4 landscape height
-        const margin = 10; // Margin on all sides
-        const contentWidth = pageWidth - (2 * margin);
+        // Header
+        doc.setFillColor(37, 99, 235);
+        doc.rect(0, 0, pageWidth, 25, 'F');
         
-        // Header with gradient
-        const gradient = doc.context2d.createLinearGradient(0, 0, pageWidth, 0);
-        gradient.addColorStop(0, '#3b82f6');
-        gradient.addColorStop(1, '#1d4ed8');
-        
-        doc.setFillColor(59, 130, 246);
-        doc.rect(0, 0, pageWidth, 30, 'F');
-        
-        // Title
         doc.setTextColor(255, 255, 255);
-        doc.setFontSize(22);
+        doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
-        doc.text('GARMENT PRODUCTION REPORT', pageWidth / 2, 18, { align: 'center' });
+        doc.text('GARMENT WORKER MANAGEMENT SYSTEM', pageWidth / 2, 15, { align: 'center' });
         
-        // Subtitle
-        doc.setFontSize(10);
+        doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
-        doc.text(`Generated: ${new Date().toLocaleDateString()} | Total Employees: ${AppState.employees.length}`, pageWidth / 2, 25, { align: 'center' });
+        doc.text(`Report Generated: ${new Date().toLocaleDateString()}`, pageWidth / 2, 22, { align: 'center' });
         
-        let yPos = 40;
+        let yPos = 35;
         
         // Summary Section
         const weekly = AppState.employees.filter(e => e.type === 'weekly');
         const monthly = AppState.employees.filter(e => e.type === 'monthly');
         const weeklyClothes = weekly.reduce((s, e) => s + e.clothes, 0);
         const monthlyClothes = monthly.reduce((s, e) => s + e.clothes, 0);
-        const weeklyHours = weekly.reduce((s, e) => s + e.netHours, 0);
-        const monthlyHours = monthly.reduce((s, e) => s + e.netHours, 0);
+        const weeklyHours = weekly.reduce((s, e) => s + (e.netHours || 0), 0);
+        const monthlyHours = monthly.reduce((s, e) => s + (e.netHours || 0), 0);
+        const totalGarments = weeklyClothes + monthlyClothes;
+        const totalHours = weeklyHours + monthlyHours;
+        const efficiency = totalHours > 0 ? (totalGarments / totalHours).toFixed(2) : 0;
         
-        // Summary Box
-        doc.setFillColor(248, 250, 252);
-        doc.rect(margin, yPos, contentWidth, 20, 'F');
-        doc.setDrawColor(226, 232, 240);
-        doc.rect(margin, yPos, contentWidth, 20);
-        
-        doc.setTextColor(30, 41, 59);
-        doc.setFontSize(12);
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(11);
         doc.setFont('helvetica', 'bold');
-        doc.text('PRODUCTION SUMMARY', margin + 10, yPos + 8);
+        doc.text('Summary Overview', 10, yPos);
+        
+        yPos += 8;
         
         doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
-        const summaryY = yPos + 15;
-        doc.text(`Total Employees: ${AppState.employees.length}`, margin + 10, summaryY);
-        doc.text(`Weekly: ${weekly.length}`, margin + 70, summaryY);
-        doc.text(`Monthly: ${monthly.length}`, margin + 110, summaryY);
-        doc.text(`Total Garments: ${weeklyClothes + monthlyClothes}`, margin + 160, summaryY);
-        doc.text(`Total Hours: ${formatHours(weeklyHours + monthlyHours)}`, margin + 220, summaryY);
+        doc.text(`Total Employees: ${AppState.employees.length}`, 10, yPos);
+        doc.text(`Weekly Employees: ${weekly.length}`, 70, yPos);
+        doc.text(`Monthly Employees: ${monthly.length}`, 130, yPos);
         
-        yPos += 30;
+        yPos += 6;
+        doc.text(`Total Garments: ${totalGarments}`, 10, yPos);
+        doc.text(`Total Hours: ${formatHours(totalHours)}`, 70, yPos);
+        doc.text(`Efficiency: ${efficiency} garments/hour`, 130, yPos);
         
-        // Weekly Employees Table - FIXED COLUMN WIDTHS
+        yPos += 15;
+        
+        // Weekly Employees Table
         if (weekly.length > 0) {
-            doc.setFontSize(11);
+            doc.setFontSize(10);
             doc.setFont('helvetica', 'bold');
-            doc.setTextColor(59, 130, 246);
-            doc.text('WEEKLY EMPLOYEES', margin, yPos);
+            doc.setTextColor(37, 99, 235);
+            doc.text('WEEKLY EMPLOYEES', 10, yPos);
             
             const weeklyData = weekly.map(emp => [
-                emp.name.length > 20 ? emp.name.substring(0, 20) + '...' : emp.name,
+                emp.name.substring(0, 20),
                 formatDate(emp.date),
                 emp.clothes.toString(),
-                formatTime(emp.startTime),
-                formatTime(emp.endTime),
-                formatHours(emp.netHours),
-                emp.notes && emp.notes.length > 20 ? emp.notes.substring(0, 20) + '...' : (emp.notes || '')
+                `${formatTime(emp.startTime)} - ${formatTime(emp.endTime)}`,
+                formatHours(emp.netHours || 0),
+                formatHours(emp.breakDuration || 0)
             ]);
             
             doc.autoTable({
-                head: [['Name', 'Date', 'Garments', 'Start', 'End', 'Hours', 'Notes']],
+                head: [['Name', 'Date', 'Garments', 'Time', 'Hours', 'Break']],
                 body: weeklyData,
                 startY: yPos + 5,
                 theme: 'grid',
                 headStyles: {
-                    fillColor: [59, 130, 246],
+                    fillColor: [37, 99, 235],
                     textColor: 255,
                     fontStyle: 'bold',
-                    fontSize: 9
+                    fontSize: 8
                 },
                 bodyStyles: {
-                    fontSize: 8,
-                    cellPadding: 2,
-                    overflow: 'linebreak'
+                    fontSize: 7,
+                    cellPadding: 2
                 },
-                alternateRowStyles: {
-                    fillColor: [240, 249, 255]
-                },
-                margin: { left: margin, right: margin },
+                margin: { left: 10, right: 10 },
                 styles: {
-                    fontSize: 8,
+                    fontSize: 7,
                     cellPadding: 2,
-                    overflow: 'linebreak',
-                    lineWidth: 0.1
-                },
-                columnStyles: {
-                    0: { cellWidth: 30 },
-                    1: { cellWidth: 25 },
-                    2: { cellWidth: 20 },
-                    3: { cellWidth: 20 },
-                    4: { cellWidth: 20 },
-                    5: { cellWidth: 18 },
-                    6: { cellWidth: 35 }
-                },
-                tableWidth: contentWidth
-            });
-            
-            yPos = doc.lastAutoTable.finalY + 15;
-        }
-        
-        // Monthly Employees Table - FIXED COLUMN WIDTHS
-        if (monthly.length > 0) {
-            if (yPos > 160) {
-                doc.addPage('landscape', 'a4');
-                yPos = margin;
-            }
-            
-            doc.setFontSize(11);
-            doc.setFont('helvetica', 'bold');
-            doc.setTextColor(139, 92, 246);
-            doc.text('MONTHLY EMPLOYEES', margin, yPos);
-            
-            const monthlyData = monthly.map(emp => [
-                emp.name.length > 20 ? emp.name.substring(0, 20) + '...' : emp.name,
-                formatDate(emp.date),
-                emp.clothes.toString(),
-                formatTime(emp.startTime),
-                formatTime(emp.endTime),
-                formatHours(emp.netHours),
-                emp.notes && emp.notes.length > 20 ? emp.notes.substring(0, 20) + '...' : (emp.notes || '')
-            ]);
-            
-            doc.autoTable({
-                head: [['Name', 'Date', 'Garments', 'Start', 'End', 'Hours', 'Notes']],
-                body: monthlyData,
-                startY: yPos + 5,
-                theme: 'grid',
-                headStyles: {
-                    fillColor: [139, 92, 246],
-                    textColor: 255,
-                    fontStyle: 'bold',
-                    fontSize: 9
-                },
-                bodyStyles: {
-                    fontSize: 8,
-                    cellPadding: 2,
-                    overflow: 'linebreak'
-                },
-                alternateRowStyles: {
-                    fillColor: [249, 240, 255]
-                },
-                margin: { left: margin, right: margin },
-                styles: {
-                    fontSize: 8,
-                    cellPadding: 2,
-                    overflow: 'linebreak',
-                    lineWidth: 0.1
-                },
-                columnStyles: {
-                    0: { cellWidth: 30 },
-                    1: { cellWidth: 25 },
-                    2: { cellWidth: 20 },
-                    3: { cellWidth: 20 },
-                    4: { cellWidth: 20 },
-                    5: { cellWidth: 18 },
-                    6: { cellWidth: 35 }
-                },
-                tableWidth: contentWidth
-            });
-            
-            yPos = doc.lastAutoTable.finalY + 15;
-        }
-        
-        // Performance Summary
-        if (yPos > 150) {
-            doc.addPage('landscape', 'a4');
-            yPos = margin;
-        }
-        
-        doc.setFontSize(11);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(16, 185, 129);
-        doc.text('PERFORMANCE ANALYSIS', pageWidth / 2, yPos, { align: 'center' });
-        
-        yPos += 10;
-        
-        const performanceData = [
-            ['Metric', 'Weekly', 'Monthly', 'Total'],
-            ['Employees', weekly.length, monthly.length, AppState.employees.length],
-            ['Garments Produced', weeklyClothes, monthlyClothes, weeklyClothes + monthlyClothes],
-            ['Work Hours', formatHours(weeklyHours), formatHours(monthlyHours), formatHours(weeklyHours + monthlyHours)],
-            ['Avg Garments/Employee', (weeklyClothes / weekly.length || 0).toFixed(1), (monthlyClothes / monthly.length || 0).toFixed(1), ((weeklyClothes + monthlyClothes) / AppState.employees.length || 0).toFixed(1)],
-            ['Efficiency (Garments/Hour)', (weeklyClothes / weeklyHours || 0).toFixed(2), (monthlyClothes / monthlyHours || 0).toFixed(2), ((weeklyClothes + monthlyClothes) / (weeklyHours + monthlyHours) || 0).toFixed(2)]
-        ];
-        
-        doc.autoTable({
-            body: performanceData,
-            startY: yPos,
-            theme: 'grid',
-            headStyles: {
-                fillColor: [16, 185, 129],
-                textColor: 255,
-                fontStyle: 'bold',
-                fontSize: 9
-            },
-            bodyStyles: {
-                fontSize: 8,
-                cellPadding: 3
-            },
-            alternateRowStyles: {
-                fillColor: [236, 253, 245]
-            },
-            margin: { left: margin + 30, right: margin + 30 },
-            styles: {
-                fontSize: 8,
-                cellPadding: 3,
-                overflow: 'linebreak'
-            },
-            columnStyles: {
-                0: { cellWidth: 60 },
-                1: { cellWidth: 35 },
-                2: { cellWidth: 35 },
-                3: { cellWidth: 35 }
-            },
-            tableWidth: contentWidth - 60
-        });
-        
-        // Footer on all pages
-        const pageCount = doc.internal.getNumberOfPages();
-        for (let i = 1; i <= pageCount; i++) {
-            doc.setPage(i);
-            
-            // Footer line
-            doc.setDrawColor(226, 232, 240);
-            doc.setLineWidth(0.5);
-            doc.line(margin, pageHeight - 20, pageWidth - margin, pageHeight - 20);
-            
-            // Page number
-            doc.setFontSize(8);
-            doc.setTextColor(148, 163, 184);
-            doc.text(`Page ${i} of ${pageCount}`, pageWidth / 2, pageHeight - 15, { align: 'center' });
-            
-            // Copyright
-            doc.text('© Garment Pro Management System - Confidential Report', pageWidth / 2, pageHeight - 10, { align: 'center' });
-        }
-        
-        // Save PDF
-        const fileName = `Garment_Production_Report_${new Date().toISOString().split('T')[0]}.pdf`;
-        doc.save(fileName);
-        
-        showToast('Professional PDF report generated successfully!', 'success');
-        
-    } catch (error) {
-        console.error('PDF Export Error:', error);
-        showToast(`Error generating PDF: ${error.message}`, 'error');
-    }
-}
-
-function exportDailyToPDF() {
-    try {
-        const date = DOM.dailyDate.value || AppState.selectedDate;
-        const dailyData = AppState.dailyEntries[date] || {};
-        
-        if (Object.keys(dailyData).length === 0) {
-            showToast('No daily entries to export', 'warning');
-            return;
-        }
-        
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF('portrait', 'mm', 'a4');
-        
-        // Page dimensions
-        const pageWidth = 210;
-        const pageHeight = 297;
-        const margin = 15;
-        const contentWidth = pageWidth - (2 * margin);
-        
-        // Header
-        doc.setFillColor(59, 130, 246);
-        doc.rect(0, 0, pageWidth, 35, 'F');
-        
-        // Title
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(20);
-        doc.setFont('helvetica', 'bold');
-        doc.text('DAILY PRODUCTION REPORT', pageWidth / 2, 20, { align: 'center' });
-        
-        // Date
-        doc.setFontSize(11);
-        doc.setFont('helvetica', 'normal');
-        doc.text(`Date: ${formatDate(date)}`, pageWidth / 2, 28, { align: 'center' });
-        
-        let yPos = 45;
-        
-        // Daily Summary
-        let activeCount = 0;
-        let totalGarments = 0;
-        let totalHours = 0;
-        
-        Object.values(dailyData).forEach(entry => {
-            if (entry.clothes > 0) {
-                activeCount++;
-                totalGarments += entry.clothes;
-                totalHours += calculateNetHours(entry.startTime, entry.breakTime, entry.endTime);
-            }
-        });
-        
-        // Summary Box
-        doc.setFillColor(248, 250, 252);
-        doc.rect(margin, yPos, contentWidth, 25, 'F');
-        doc.setDrawColor(226, 232, 240);
-        doc.rect(margin, yPos, contentWidth, 25);
-        
-        doc.setTextColor(30, 41, 59);
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-        doc.text('DAILY SUMMARY', margin + 10, yPos + 10);
-        
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'normal');
-        const summaryY = yPos + 18;
-        doc.text(`Working Today: ${activeCount}`, margin + 10, summaryY);
-        doc.text(`Total Garments: ${totalGarments}`, margin + 70, summaryY);
-        doc.text(`Total Hours: ${formatHours(totalHours)}`, margin + 130, summaryY);
-        doc.text(`Avg/Employee: ${activeCount > 0 ? Math.round(totalGarments / activeCount) : 0}`, margin + 180, summaryY);
-        
-        yPos += 35;
-        
-        // Daily Entries Table
-        doc.setFontSize(11);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(59, 130, 246);
-        doc.text('DAILY ENTRIES', margin, yPos);
-        
-        const tableData = [];
-        Object.keys(dailyData).forEach(employeeName => {
-            const entry = dailyData[employeeName];
-            if (entry.clothes > 0) {
-                const employee = AppState.employees.find(emp => emp.name === employeeName);
-                const type = employee ? employee.type.charAt(0).toUpperCase() + employee.type.slice(1) : 'Weekly';
-                const netHours = calculateNetHours(entry.startTime, entry.breakTime, entry.endTime);
-                
-                tableData.push([
-                    employeeName.length > 20 ? employeeName.substring(0, 20) + '...' : employeeName,
-                    type,
-                    entry.clothes.toString(),
-                    formatTime(entry.startTime),
-                    formatTime(entry.endTime),
-                    formatHours(netHours),
-                    entry.notes && entry.notes.length > 25 ? entry.notes.substring(0, 25) + '...' : (entry.notes || '')
-                ]);
-            }
-        });
-        
-        if (tableData.length > 0) {
-            doc.autoTable({
-                head: [['Employee', 'Type', 'Garments', 'Start', 'End', 'Hours', 'Notes']],
-                body: tableData,
-                startY: yPos + 5,
-                theme: 'grid',
-                headStyles: {
-                    fillColor: [59, 130, 246],
-                    textColor: 255,
-                    fontStyle: 'bold',
-                    fontSize: 9
-                },
-                bodyStyles: {
-                    fontSize: 8,
-                    cellPadding: 2,
-                    overflow: 'linebreak'
-                },
-                alternateRowStyles: {
-                    fillColor: [240, 249, 255]
-                },
-                margin: { left: margin, right: margin },
-                styles: {
-                    fontSize: 8,
-                    cellPadding: 2,
-                    overflow: 'linebreak',
                     lineWidth: 0.1
                 },
                 columnStyles: {
                     0: { cellWidth: 35 },
-                    1: { cellWidth: 20 },
+                    1: { cellWidth: 25 },
                     2: { cellWidth: 20 },
-                    3: { cellWidth: 25 },
-                    4: { cellWidth: 25 },
-                    5: { cellWidth: 18 },
-                    6: { cellWidth: 45 }
-                },
-                tableWidth: contentWidth
+                    3: { cellWidth: 35 },
+                    4: { cellWidth: 20 },
+                    5: { cellWidth: 20 }
+                }
             });
             
-            yPos = doc.lastAutoTable.finalY + 15;
+            yPos = doc.lastAutoTable.finalY + 10;
+        }
+        
+        // Monthly Employees Table
+        if (monthly.length > 0) {
+            if (yPos > 200) {
+                doc.addPage();
+                yPos = 20;
+            }
+            
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(124, 58, 237);
+            doc.text('MONTHLY EMPLOYEES', 10, yPos);
+            
+            const monthlyData = monthly.map(emp => [
+                emp.name.substring(0, 20),
+                formatDate(emp.date),
+                emp.clothes.toString(),
+                `${formatTime(emp.startTime)} - ${formatTime(emp.endTime)}`,
+                formatHours(emp.netHours || 0),
+                formatHours(emp.breakDuration || 0)
+            ]);
+            
+            doc.autoTable({
+                head: [['Name', 'Date', 'Garments', 'Time', 'Hours', 'Break']],
+                body: monthlyData,
+                startY: yPos + 5,
+                theme: 'grid',
+                headStyles: {
+                    fillColor: [124, 58, 237],
+                    textColor: 255,
+                    fontStyle: 'bold',
+                    fontSize: 8
+                },
+                bodyStyles: {
+                    fontSize: 7,
+                    cellPadding: 2
+                },
+                margin: { left: 10, right: 10 },
+                styles: {
+                    fontSize: 7,
+                    cellPadding: 2,
+                    lineWidth: 0.1
+                },
+                columnStyles: {
+                    0: { cellWidth: 35 },
+                    1: { cellWidth: 25 },
+                    2: { cellWidth: 20 },
+                    3: { cellWidth: 35 },
+                    4: { cellWidth: 20 },
+                    5: { cellWidth: 20 }
+                }
+            });
         }
         
         // Footer
         const pageCount = doc.internal.getNumberOfPages();
         for (let i = 1; i <= pageCount; i++) {
             doc.setPage(i);
-            
-            // Footer line
-            doc.setDrawColor(226, 232, 240);
-            doc.setLineWidth(0.5);
-            doc.line(margin, pageHeight - 20, pageWidth - margin, pageHeight - 20);
-            
-            // Page number
-            doc.setFontSize(8);
-            doc.setTextColor(148, 163, 184);
-            doc.text(`Page ${i} of ${pageCount}`, pageWidth / 2, pageHeight - 15, { align: 'center' });
-            
-            // Copyright
-            doc.text('Daily Production Report | Garment Pro Management System', pageWidth / 2, pageHeight - 10, { align: 'center' });
+            doc.setFontSize(7);
+            doc.setTextColor(100, 116, 139);
+            doc.text(`Page ${i} of ${pageCount}`, pageWidth / 2, 290, { align: 'center' });
+            doc.text('© Garment Management System v3.2.2', pageWidth / 2, 295, { align: 'center' });
         }
         
-        // Save PDF
-        const fileName = `Daily_Report_${date.replace(/-/g, '_')}.pdf`;
+        const fileName = `Garment_Report_${new Date().toISOString().split('T')[0]}.pdf`;
         doc.save(fileName);
         
-        showToast('Daily report generated successfully!', 'success');
+        showToast('Complete PDF report generated successfully!', 'success');
         
     } catch (error) {
-        console.error('Daily PDF Export Error:', error);
-        showToast(`Error generating daily report: ${error.message}`, 'error');
+        console.error('PDF Export Error:', error);
+        showToast(`Error generating PDF: ${error.message}`, 'error');
     }
 }
 
@@ -1411,22 +1753,20 @@ function exportToExcel() {
         const weekly = AppState.employees.filter(e => e.type === 'weekly');
         const monthly = AppState.employees.filter(e => e.type === 'monthly');
         
-        // Create workbook
         const wb = XLSX.utils.book_new();
         wb.Props = {
-            Title: "Garment Production Report",
-            Subject: "Employee Performance Data",
-            Author: "Garment Pro Management System",
+            Title: "Garment Worker Management Report",
+            Author: "Garment Management System",
             CreatedDate: new Date()
         };
         
-        // Weekly Employees Sheet
         if (weekly.length > 0) {
             const weeklyData = [
-                ['WEEKLY EMPLOYEES - PRODUCTION REPORT'],
+                ['WEEKLY EMPLOYEES REPORT'],
                 [`Report Date: ${new Date().toLocaleDateString()}`],
+                [`Total Employees: ${weekly.length}`],
                 [''],
-                ['Name', 'Date', 'Garments', 'Start Time', 'Break Time', 'End Time', 'Net Hours', 'Notes']
+                ['Name', 'Date', 'Garments', 'Start Time', 'Break Time', 'End Time', 'Net Hours', 'Break Hours', 'Notes']
             ];
             
             weekly.forEach(emp => {
@@ -1437,46 +1777,48 @@ function exportToExcel() {
                     formatTime(emp.startTime),
                     formatTime(emp.breakTime),
                     formatTime(emp.endTime),
-                    parseFloat(emp.netHours.toFixed(2)),
+                    parseFloat((emp.netHours || 0).toFixed(2)),
+                    parseFloat((emp.breakDuration || 0).toFixed(2)),
                     emp.notes || ''
                 ]);
             });
             
-            // Add summary
-            const totalClothes = weekly.reduce((s, e) => s + e.clothes, 0);
-            const totalHours = weekly.reduce((s, e) => s + e.netHours, 0);
-            
+            // Summary row
+            const weeklyTotalGarments = weekly.reduce((sum, emp) => sum + emp.clothes, 0);
+            const weeklyTotalHours = weekly.reduce((sum, emp) => sum + (emp.netHours || 0), 0);
             weeklyData.push(['']);
-            weeklyData.push(['SUMMARY']);
+            weeklyData.push(['WEEKLY SUMMARY']);
             weeklyData.push(['Total Employees', weekly.length]);
-            weeklyData.push(['Total Garments', totalClothes]);
-            weeklyData.push(['Total Hours', parseFloat(totalHours.toFixed(2))]);
-            weeklyData.push(['Average per Employee', parseFloat((totalClothes / weekly.length).toFixed(1))]);
+            weeklyData.push(['Total Garments', weeklyTotalGarments]);
+            weeklyData.push(['Total Hours', parseFloat(weeklyTotalHours.toFixed(2))]);
+            weeklyData.push(['Average Garments/Employee', parseFloat((weeklyTotalGarments / weekly.length).toFixed(1))]);
+            weeklyData.push(['Efficiency', weeklyTotalHours > 0 ? parseFloat((weeklyTotalGarments / weeklyTotalHours).toFixed(2)) : 0]);
             
             const wsWeekly = XLSX.utils.aoa_to_sheet(weeklyData);
             
-            // Set column widths
-            wsWeekly['!cols'] = [
-                { wch: 25 },
-                { wch: 15 },
-                { wch: 12 },
-                { wch: 12 },
-                { wch: 12 },
-                { wch: 12 },
-                { wch: 12 },
-                { wch: 30 }
-            ];
+            // Auto-size columns
+            const colWidths = weeklyData.reduce((widths, row) => {
+                row.forEach((cell, colIndex) => {
+                    const length = cell ? cell.toString().length : 0;
+                    if (!widths[colIndex] || length > widths[colIndex]) {
+                        widths[colIndex] = length;
+                    }
+                });
+                return widths;
+            }, []);
+            
+            wsWeekly['!cols'] = colWidths.map(width => ({ wch: Math.min(width + 2, 50) }));
             
             XLSX.utils.book_append_sheet(wb, wsWeekly, "Weekly Employees");
         }
         
-        // Monthly Employees Sheet
         if (monthly.length > 0) {
             const monthlyData = [
-                ['MONTHLY EMPLOYEES - PRODUCTION REPORT'],
+                ['MONTHLY EMPLOYEES REPORT'],
                 [`Report Date: ${new Date().toLocaleDateString()}`],
+                [`Total Employees: ${monthly.length}`],
                 [''],
-                ['Name', 'Date', 'Garments', 'Start Time', 'Break Time', 'End Time', 'Net Hours', 'Notes']
+                ['Name', 'Date', 'Garments', 'Start Time', 'Break Time', 'End Time', 'Net Hours', 'Break Hours', 'Notes']
             ];
             
             monthly.forEach(emp => {
@@ -1487,88 +1829,45 @@ function exportToExcel() {
                     formatTime(emp.startTime),
                     formatTime(emp.breakTime),
                     formatTime(emp.endTime),
-                    parseFloat(emp.netHours.toFixed(2)),
+                    parseFloat((emp.netHours || 0).toFixed(2)),
+                    parseFloat((emp.breakDuration || 0).toFixed(2)),
                     emp.notes || ''
                 ]);
             });
             
-            // Add summary
-            const totalClothes = monthly.reduce((s, e) => s + e.clothes, 0);
-            const totalHours = monthly.reduce((s, e) => s + e.netHours, 0);
-            
+            // Summary row
+            const monthlyTotalGarments = monthly.reduce((sum, emp) => sum + emp.clothes, 0);
+            const monthlyTotalHours = monthly.reduce((sum, emp) => sum + (emp.netHours || 0), 0);
             monthlyData.push(['']);
-            monthlyData.push(['SUMMARY']);
+            monthlyData.push(['MONTHLY SUMMARY']);
             monthlyData.push(['Total Employees', monthly.length]);
-            monthlyData.push(['Total Garments', totalClothes]);
-            monthlyData.push(['Total Hours', parseFloat(totalHours.toFixed(2))]);
-            monthlyData.push(['Average per Employee', parseFloat((totalClothes / monthly.length).toFixed(1))]);
+            monthlyData.push(['Total Garments', monthlyTotalGarments]);
+            monthlyData.push(['Total Hours', parseFloat(monthlyTotalHours.toFixed(2))]);
+            monthlyData.push(['Average Garments/Employee', parseFloat((monthlyTotalGarments / monthly.length).toFixed(1))]);
+            monthlyData.push(['Efficiency', monthlyTotalHours > 0 ? parseFloat((monthlyTotalGarments / monthlyTotalHours).toFixed(2)) : 0]);
             
             const wsMonthly = XLSX.utils.aoa_to_sheet(monthlyData);
             
-            // Set column widths
-            wsMonthly['!cols'] = [
-                { wch: 25 },
-                { wch: 15 },
-                { wch: 12 },
-                { wch: 12 },
-                { wch: 12 },
-                { wch: 12 },
-                { wch: 12 },
-                { wch: 30 }
-            ];
+            // Auto-size columns
+            const colWidths = monthlyData.reduce((widths, row) => {
+                row.forEach((cell, colIndex) => {
+                    const length = cell ? cell.toString().length : 0;
+                    if (!widths[colIndex] || length > widths[colIndex]) {
+                        widths[colIndex] = length;
+                    }
+                });
+                return widths;
+            }, []);
+            
+            wsMonthly['!cols'] = colWidths.map(width => ({ wch: Math.min(width + 2, 50) }));
             
             XLSX.utils.book_append_sheet(wb, wsMonthly, "Monthly Employees");
         }
         
-        // Summary Sheet
-        const summaryData = [
-            ['GARMENT PRODUCTION - EXECUTIVE SUMMARY'],
-            [`Generated: ${new Date().toLocaleDateString()}`],
-            [''],
-            ['METRIC', 'WEEKLY', 'MONTHLY', 'TOTAL'],
-            ['Number of Employees', weekly.length, monthly.length, AppState.employees.length],
-            ['Total Garments Produced', 
-             weekly.reduce((s, e) => s + e.clothes, 0),
-             monthly.reduce((s, e) => s + e.clothes, 0),
-             weekly.reduce((s, e) => s + e.clothes, 0) + monthly.reduce((s, e) => s + e.clothes, 0)],
-            ['Total Work Hours',
-             parseFloat(weekly.reduce((s, e) => s + e.netHours, 0).toFixed(2)),
-             parseFloat(monthly.reduce((s, e) => s + e.netHours, 0).toFixed(2)),
-             parseFloat((weekly.reduce((s, e) => s + e.netHours, 0) + monthly.reduce((s, e) => s + e.netHours, 0)).toFixed(2))],
-            ['Average Garments per Employee',
-             parseFloat((weekly.reduce((s, e) => s + e.clothes, 0) / weekly.length || 0).toFixed(1)),
-             parseFloat((monthly.reduce((s, e) => s + e.clothes, 0) / monthly.length || 0).toFixed(1)),
-             parseFloat(((weekly.reduce((s, e) => s + e.clothes, 0) + monthly.reduce((s, e) => s + e.clothes, 0)) / AppState.employees.length || 0).toFixed(1))],
-            ['Efficiency (Garments per Hour)',
-             parseFloat((weekly.reduce((s, e) => s + e.clothes, 0) / (weekly.reduce((s, e) => s + e.netHours, 0) || 1)).toFixed(2)),
-             parseFloat((monthly.reduce((s, e) => s + e.clothes, 0) / (monthly.reduce((s, e) => s + e.netHours, 0) || 1)).toFixed(2)),
-             parseFloat(((weekly.reduce((s, e) => s + e.clothes, 0) + monthly.reduce((s, e) => s + e.clothes, 0)) / 
-                        ((weekly.reduce((s, e) => s + e.netHours, 0) + monthly.reduce((s, e) => s + e.netHours, 0)) || 1)).toFixed(2))]
-        ];
-        
-        const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
-        
-        // Merge title cells
-        wsSummary['!merges'] = [
-            { s: { r: 0, c: 0 }, e: { r: 0, c: 3 } },
-            { s: { r: 1, c: 0 }, e: { r: 1, c: 3 } }
-        ];
-        
-        // Set column widths
-        wsSummary['!cols'] = [
-            { wch: 35 },
-            { wch: 15 },
-            { wch: 15 },
-            { wch: 15 }
-        ];
-        
-        XLSX.utils.book_append_sheet(wb, wsSummary, "Executive Summary");
-        
-        // Save Excel file
-        const fileName = `Garment_Production_${new Date().toISOString().split('T')[0]}.xlsx`;
+        const fileName = `Garment_Report_${new Date().toISOString().split('T')[0]}.xlsx`;
         XLSX.writeFile(wb, fileName);
         
-        showToast('Excel report generated successfully!', 'success');
+        showToast('Complete Excel report generated successfully!', 'success');
         
     } catch (error) {
         console.error('Excel Export Error:', error);
@@ -1582,12 +1881,11 @@ function exportBackup() {
             metadata: {
                 exportedAt: new Date().toISOString(),
                 totalEmployees: AppState.employees.length,
-                dailyEntries: Object.keys(AppState.dailyEntries).length,
-                version: '3.1.0'
+                dailyEntriesCount: Object.keys(AppState.dailyEntries).length,
+                version: '3.2.2'
             },
             employees: AppState.employees,
             nextId: AppState.nextId,
-            employeeList: AppState.employeeList,
             dailyEntries: AppState.dailyEntries
         };
         
@@ -1598,6 +1896,7 @@ function exportBackup() {
         const a = document.createElement('a');
         a.href = url;
         a.download = `garment_backup_${new Date().toISOString().split('T')[0]}.json`;
+        a.style.display = 'none';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -1606,69 +1905,11 @@ function exportBackup() {
         localStorage.setItem('lastBackup', new Date().toISOString());
         updateStorageInfo();
         
-        showToast('Backup exported successfully', 'success');
+        showToast(`Backup exported successfully (${data.totalEmployees} employees)`, 'success');
     } catch (error) {
         console.error('Backup Export Error:', error);
         showToast(`Error exporting backup: ${error.message}`, 'error');
     }
-}
-
-function importData(file) {
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        try {
-            const data = JSON.parse(e.target.result);
-            if (data.employees && Array.isArray(data.employees)) {
-                AppState.employees = data.employees;
-                AppState.nextId = data.nextId || 1;
-                AppState.employeeList = data.employeeList || [];
-                AppState.dailyEntries = data.dailyEntries || {};
-                if (saveData()) {
-                    updateUI();
-                    updateStats();
-                    showToast('Data imported successfully', 'success');
-                }
-            } else {
-                showToast('Invalid data format', 'error');
-            }
-        } catch (error) {
-            showToast('Error importing data', 'error');
-        }
-    };
-    reader.readAsText(file);
-}
-
-function clearAllData() {
-    if (AppState.employees.length === 0 && Object.keys(AppState.dailyEntries).length === 0) {
-        showToast('No data to clear', 'warning');
-        return;
-    }
-    
-    if (confirm(`Are you sure you want to delete ALL data?\n\nThis will delete:\n• ${AppState.employees.length} employee records\n• ${Object.keys(AppState.dailyEntries).length} days of daily entries\n\nThis action cannot be undone.`)) {
-        AppState.employees = [];
-        AppState.employeeList = [];
-        AppState.dailyEntries = {};
-        AppState.nextId = 1;
-        if (saveData()) {
-            updateUI();
-            updateStats();
-            showToast('All data cleared successfully', 'success');
-        }
-    }
-}
-function toggleDailyExportMenu() {
-    const menu = document.getElementById('dailyExportMenu');
-    menu.classList.toggle('show');
-    
-    // Close menu when clicking outside
-    setTimeout(() => {
-        document.addEventListener('click', function closeMenu(e) {
-            if (!menu.contains(e.target) && !e.target.closest('.dropdown')) {
-                menu.classList.remove('show');
-                document.removeEventListener('click', closeMenu);
-            }
-        });
-    }, 0);
 }
 
 // ============================================
@@ -1679,7 +1920,6 @@ function updateUI() {
     updateNavigation();
     updateTables();
     updateForm();
-    updateStats();
     updatePreview();
     updateDailyTable();
 }
@@ -1690,10 +1930,10 @@ function updateNavigation() {
     const today = new Date().toISOString().split('T')[0];
     const todayEntries = Object.keys(AppState.dailyEntries[today] || {}).length;
     
-    DOM.navWeekly.textContent = weeklyCount;
-    DOM.navMonthly.textContent = monthlyCount;
-    DOM.navDaily.textContent = todayEntries;
-    DOM.mobileTotal.textContent = AppState.employees.length;
+    if (DOM.navWeekly) DOM.navWeekly.textContent = weeklyCount;
+    if (DOM.navMonthly) DOM.navMonthly.textContent = monthlyCount;
+    if (DOM.navDaily) DOM.navDaily.textContent = todayEntries;
+    if (DOM.mobileTotal) DOM.mobileTotal.textContent = AppState.employees.length;
 }
 
 function updateTables() {
@@ -1704,8 +1944,14 @@ function updateTables() {
 function updateTable(type) {
     const tableBody = type === 'weekly' ? DOM.weeklyTableBody : DOM.monthlyTableBody;
     const emptyState = type === 'weekly' ? DOM.weeklyEmpty : DOM.monthlyEmpty;
+    const pageInfo = type === 'weekly' ? DOM.weeklyPageInfo : DOM.monthlyPageInfo;
+    
+    if (!tableBody || !emptyState) return;
     
     let employees = AppState.employees.filter(emp => emp.type === type);
+    
+    // Update sort indicators
+    updateSortIndicators(type);
     
     const sortConfig = AppState.sortConfig[type];
     employees.sort((a, b) => {
@@ -1717,9 +1963,9 @@ function updateTable(type) {
             bValue = new Date(b.date);
         }
         
-        if (sortConfig.key === 'clothes' || sortConfig.key === 'netHours') {
-            aValue = parseFloat(aValue);
-            bValue = parseFloat(bValue);
+        if (sortConfig.key === 'clothes' || sortConfig.key === 'netHours' || sortConfig.key === 'breakDuration') {
+            aValue = parseFloat(aValue) || 0;
+            bValue = parseFloat(bValue) || 0;
         }
         
         if (sortConfig.direction === 'asc') {
@@ -1738,7 +1984,7 @@ function updateTable(type) {
     if (pageEmployees.length === 0) {
         tableBody.innerHTML = '';
         emptyState.classList.add('show');
-        updatePaginationInfo(type, 0, employees.length);
+        updatePaginationInfo(type, 0, employees.length, currentPage, totalPages);
         return;
     }
     
@@ -1749,25 +1995,24 @@ function updateTable(type) {
             <td>
                 <div class="employee-info">
                     <strong>${employee.name}</strong>
-                    ${employee.notes ? `<small>${employee.notes}</small>` : ''}
+                    ${employee.notes ? `<small class="text-muted">${employee.notes}</small>` : ''}
                 </div>
             </td>
             <td>${formatDate(employee.date)}</td>
             <td>
-                <span class="badge" style="background: ${employee.type === 'weekly' ? 'var(--weekly-color)' : 'var(--monthly-color)'}">
-                    ${employee.clothes}
-                </span>
+                <span class="badge ${type}-badge">${employee.clothes}</span>
             </td>
             <td>
-                <span class="text-primary" style="font-weight: 600;">${formatHours(employee.netHours)}h</span>
-                <small>${formatTime(employee.startTime)} - ${formatTime(employee.endTime)}</small>
+                <span class="text-primary">${formatHours(employee.netHours || 0)}h</span>
+                <small class="text-muted d-block">${formatTime(employee.startTime)} - ${formatTime(employee.endTime)}</small>
+                ${employee.breakDuration ? `<small class="text-muted d-block">Break: ${formatHours(employee.breakDuration)}h</small>` : ''}
             </td>
             <td>
                 <div class="actions">
-                    <button class="action-btn edit" onclick="editEmployee('${employee.id}')" title="Edit">
+                    <button class="action-btn edit" onclick="editEmployee('${employee.id}')" title="Edit" aria-label="Edit ${employee.name}">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button class="action-btn delete" onclick="deleteEmployee('${employee.id}')" title="Delete">
+                    <button class="action-btn delete" onclick="deleteEmployee('${employee.id}')" title="Delete" aria-label="Delete ${employee.name}">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
@@ -1775,50 +2020,88 @@ function updateTable(type) {
         </tr>
     `).join('');
     
-    updatePaginationInfo(type, pageEmployees.length, employees.length);
+    updatePaginationInfo(type, pageEmployees.length, employees.length, currentPage, totalPages);
     updatePaginationButtons(type, currentPage, totalPages);
+    
+    // Update page info
+    if (pageInfo) {
+        pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+    }
 }
 
-function updatePaginationInfo(type, showing, total) {
+function updateSortIndicators(type) {
+    const sortConfig = AppState.sortConfig[type];
+    const table = type === 'weekly' ? 'weeklyTable' : 'monthlyTable';
+    const thElements = document.querySelectorAll(`#${table} th[data-sort]`);
+    
+    thElements.forEach(th => {
+        th.classList.remove('sort-asc', 'sort-desc');
+        if (th.dataset.sort === sortConfig.key) {
+            th.classList.add(`sort-${sortConfig.direction}`);
+            th.setAttribute('aria-sort', sortConfig.direction === 'asc' ? 'ascending' : 'descending');
+        } else {
+            th.setAttribute('aria-sort', 'none');
+        }
+    });
+}
+
+function updatePaginationInfo(type, showing, total, currentPage, totalPages) {
     const showingElement = type === 'weekly' ? DOM.weeklyShowing : DOM.monthlyShowing;
     const totalElement = type === 'weekly' ? DOM.weeklyTotal : DOM.monthlyTotal;
     
-    showingElement.textContent = showing;
-    totalElement.textContent = total;
+    if (showingElement) showingElement.textContent = showing;
+    if (totalElement) totalElement.textContent = total;
 }
 
 function updatePaginationButtons(type, currentPage, totalPages) {
     const prevBtn = type === 'weekly' ? DOM.prevWeekly : DOM.prevMonthly;
     const nextBtn = type === 'weekly' ? DOM.nextWeekly : DOM.nextMonthly;
     
-    prevBtn.disabled = currentPage <= 1;
-    nextBtn.disabled = currentPage >= totalPages;
+    if (prevBtn) {
+        prevBtn.disabled = currentPage <= 1;
+        prevBtn.setAttribute('aria-disabled', currentPage <= 1);
+    }
+    if (nextBtn) {
+        nextBtn.disabled = currentPage >= totalPages;
+        nextBtn.setAttribute('aria-disabled', currentPage >= totalPages);
+    }
 }
 
 function updateForm() {
     const today = new Date().toISOString().split('T')[0];
-    if (!DOM.workDate.value) {
+    if (DOM.workDate && !DOM.workDate.value) {
         DOM.workDate.value = today;
     }
-    DOM.workDate.max = today;
+    if (DOM.workDate) {
+        DOM.workDate.max = today;
+    }
     
-    if (!DOM.startTime.value) {
+    if (DOM.startTime && !DOM.startTime.value) {
         DOM.startTime.value = '09:00';
         DOM.breakTime.value = '13:00';
         DOM.endTime.value = '17:00';
         updateTimeSummary();
     }
+    
+    // Set focus to first input for better UX
+    if (DOM.employeeName && AppState.currentSection === 'form') {
+        setTimeout(() => {
+            if (!document.activeElement || document.activeElement.tagName === 'BODY') {
+                DOM.employeeName.focus();
+            }
+        }, 100);
+    }
 }
 
 function updateTimeSummary() {
-    const start = DOM.startTime.value;
-    const breakTime = DOM.breakTime.value;
-    const end = DOM.endTime.value;
+    const start = DOM.startTime ? DOM.startTime.value : '';
+    const breakTime = DOM.breakTime ? DOM.breakTime.value : '';
+    const end = DOM.endTime ? DOM.endTime.value : '';
     
-    if (start && end) {
+    if (start && end && DOM.totalHours && DOM.netHours && DOM.breakDuration) {
         const total = calculateTimeDifference(start, end);
         const net = calculateNetHours(start, breakTime, end);
-        const breakDuration = total - net;
+        const breakDuration = calculateActualBreakDuration(start, breakTime, end);
         
         DOM.totalHours.textContent = formatHours(total);
         DOM.netHours.textContent = formatHours(net);
@@ -1830,68 +2113,610 @@ function updateStats() {
     const weeklyEmployees = AppState.employees.filter(e => e.type === 'weekly');
     const monthlyEmployees = AppState.employees.filter(e => e.type === 'monthly');
     
-    // Weekly stats
     const weeklyClothes = weeklyEmployees.reduce((sum, emp) => sum + emp.clothes, 0);
-    const weeklyHours = weeklyEmployees.reduce((sum, emp) => sum + emp.netHours, 0);
-    const weeklyAvgClothes = weeklyEmployees.length > 0 ? Math.round(weeklyClothes / weeklyEmployees.length) : 0;
+    const weeklyHours = weeklyEmployees.reduce((sum, emp) => sum + (emp.netHours || 0), 0);
+    const weeklyAvgClothes = weeklyEmployees.length > 0 ? (weeklyClothes / weeklyEmployees.length).toFixed(1) : '0';
     
-    DOM.weeklyCount.textContent = weeklyEmployees.length;
-    DOM.weeklyGarments.textContent = weeklyClothes;
-    DOM.weeklyHours.textContent = formatHours(weeklyHours);
-    DOM.weeklyAvg.textContent = weeklyAvgClothes;
+    if (DOM.weeklyCount) DOM.weeklyCount.textContent = weeklyEmployees.length;
+    if (DOM.weeklyGarments) DOM.weeklyGarments.textContent = weeklyClothes;
+    if (DOM.weeklyHours) DOM.weeklyHours.textContent = formatHours(weeklyHours);
+    if (DOM.weeklyAvg) DOM.weeklyAvg.textContent = weeklyAvgClothes;
     
-    // Monthly stats
     const monthlyClothes = monthlyEmployees.reduce((sum, emp) => sum + emp.clothes, 0);
-    const monthlyHours = monthlyEmployees.reduce((sum, emp) => sum + emp.netHours, 0);
-    const monthlyAvgClothes = monthlyEmployees.length > 0 ? Math.round(monthlyClothes / monthlyEmployees.length) : 0;
+    const monthlyHours = monthlyEmployees.reduce((sum, emp) => sum + (emp.netHours || 0), 0);
+    const monthlyAvgClothes = monthlyEmployees.length > 0 ? (monthlyClothes / monthlyEmployees.length).toFixed(1) : '0';
     
-    DOM.monthlyCount.textContent = monthlyEmployees.length;
-    DOM.monthlyGarments.textContent = monthlyClothes;
-    DOM.monthlyHours.textContent = formatHours(monthlyHours);
-    DOM.monthlyAvg.textContent = monthlyAvgClothes;
+    if (DOM.monthlyCount) DOM.monthlyCount.textContent = monthlyEmployees.length;
+    if (DOM.monthlyGarments) DOM.monthlyGarments.textContent = monthlyClothes;
+    if (DOM.monthlyHours) DOM.monthlyHours.textContent = formatHours(monthlyHours);
+    if (DOM.monthlyAvg) DOM.monthlyAvg.textContent = monthlyAvgClothes;
     
-    // Overall stats
     const totalClothes = weeklyClothes + monthlyClothes;
     const totalHours = weeklyHours + monthlyHours;
-    const efficiency = totalHours > 0 ? (totalClothes / totalHours).toFixed(2) : 0;
+    const efficiency = totalHours > 0 ? (totalClothes / totalHours).toFixed(2) : '0';
     
-    DOM.desktopTotal.textContent = AppState.employees.length;
-    DOM.desktopGarments.textContent = totalClothes;
-    DOM.desktopHours.textContent = formatHours(totalHours);
-    DOM.footerTotal.textContent = AppState.employees.length;
-    DOM.footerGarments.textContent = totalClothes;
-    DOM.footerEfficiency.textContent = efficiency;
+    if (DOM.desktopTotal) DOM.desktopTotal.textContent = AppState.employees.length;
+    if (DOM.desktopGarments) DOM.desktopGarments.textContent = totalClothes;
+    if (DOM.desktopHours) DOM.desktopHours.textContent = formatHours(totalHours);
+    if (DOM.footerTotal) DOM.footerTotal.textContent = AppState.employees.length;
+    if (DOM.footerGarments) DOM.footerGarments.textContent = totalClothes;
+    if (DOM.footerEfficiency) DOM.footerEfficiency.textContent = efficiency;
     
-    // Settings
-    DOM.settingsTotal.textContent = AppState.employees.length;
+    if (DOM.settingsTotal) DOM.settingsTotal.textContent = AppState.employees.length;
 }
 
 function updatePreview() {
     const weeklyEmployees = AppState.employees.filter(e => e.type === 'weekly');
     const monthlyEmployees = AppState.employees.filter(e => e.type === 'monthly');
+    
+    const weeklyClothes = weeklyEmployees.reduce((sum, emp) => sum + emp.clothes, 0);
+    const monthlyClothes = monthlyEmployees.reduce((sum, emp) => sum + emp.clothes, 0);
+    
     const today = new Date().toISOString().split('T')[0];
-    const dailyData = AppState.dailyEntries[today] || {};
+    const todayData = AppState.dailyEntries[today] || {};
+    const todayGarments = Object.values(todayData).reduce((sum, entry) => sum + entry.clothes, 0);
     
-    const weeklyClothes = weeklyEmployees.reduce((s, e) => s + e.clothes, 0);
-    const monthlyClothes = monthlyEmployees.reduce((s, e) => s + e.clothes, 0);
-    const totalClothes = weeklyClothes + monthlyClothes;
+    if (DOM.previewWeekly) DOM.previewWeekly.textContent = weeklyEmployees.length;
+    if (DOM.previewWeeklyGarments) DOM.previewWeeklyGarments.textContent = weeklyClothes;
+    if (DOM.previewMonthly) DOM.previewMonthly.textContent = monthlyEmployees.length;
+    if (DOM.previewMonthlyGarments) DOM.previewMonthlyGarments.textContent = monthlyClothes;
+    if (DOM.previewToday) DOM.previewToday.textContent = Object.keys(todayData).length;
+    if (DOM.previewTodayGarments) DOM.previewTodayGarments.textContent = todayGarments;
+    if (DOM.previewTotal) DOM.previewTotal.textContent = AppState.employees.length;
     
-    // Calculate today's garments from daily entries
-    let todayGarments = 0;
-    Object.values(dailyData).forEach(entry => {
-        todayGarments += entry.clothes || 0;
+    const totalHours = AppState.employees.reduce((sum, emp) => sum + (emp.netHours || 0), 0);
+    if (DOM.previewHours) DOM.previewHours.textContent = formatHours(totalHours);
+}
+
+// ============================================
+// Navigation Management - ACCESSIBILITY FIXED
+// ============================================
+
+function showSection(sectionId) {
+    // Hide all sections
+    document.querySelectorAll('.content-section').forEach(section => {
+        section.classList.remove('active');
+        section.style.display = 'none';
     });
     
-    const weeklyHours = weeklyEmployees.reduce((s, e) => s + e.netHours, 0);
-    const monthlyHours = monthlyEmployees.reduce((s, e) => s + e.netHours, 0);
-    const totalHours = weeklyHours + monthlyHours;
+    // Update navigation links
+    document.querySelectorAll('.nav-link, .nav-item, .desktop-nav-link').forEach(link => {
+        link.classList.remove('active');
+        link.removeAttribute('aria-current');
+    });
     
-    DOM.previewWeekly.textContent = weeklyEmployees.length;
-    DOM.previewWeeklyGarments.textContent = weeklyClothes;
-    DOM.previewMonthly.textContent = monthlyEmployees.length;
-    DOM.previewMonthlyGarments.textContent = monthlyClothes;
-    DOM.previewToday.textContent = Object.keys(dailyData).length;
-    DOM.previewTodayGarments.textContent = todayGarments;
-    DOM.previewTotal.textContent = AppState.employees.length;
-    DOM.previewHours.textContent = formatHours(totalHours);
+    // Show selected section
+    const section = document.getElementById(sectionId);
+    if (section) {
+        section.classList.add('active');
+        section.style.display = 'block';
+        
+        AppState.currentSection = sectionId;
+        
+        // Update active navigation links
+        const navLink = document.querySelector(`.nav-link[href="#${sectionId}"]`);
+        const desktopNavLink = document.querySelector(`.desktop-nav-link[href="#${sectionId}"]`);
+        const navItem = document.querySelector(`.nav-item[href="#${sectionId}"]`);
+        
+        if (navLink) {
+            navLink.classList.add('active');
+            navLink.setAttribute('aria-current', 'page');
+        }
+        if (desktopNavLink) {
+            desktopNavLink.classList.add('active');
+            desktopNavLink.setAttribute('aria-current', 'page');
+        }
+        if (navItem) {
+            navItem.classList.add('active');
+            navItem.setAttribute('aria-current', 'page');
+        }
+        
+        // Hide mobile menu
+        hideMobileMenu();
+        
+        // Close export menu if open
+        if (DOM.dailyExportMenu) {
+            DOM.dailyExportMenu.classList.remove('show');
+            if (DOM.dailyExportButton) {
+                DOM.dailyExportButton.setAttribute('aria-expanded', 'false');
+            }
+        }
+        
+        // Scroll to top smoothly
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        
+        // Update URL hash without scrolling
+        window.history.replaceState(null, null, `#${sectionId}`);
+        
+        // Update form for the new section
+        if (sectionId === 'form') {
+            updateForm();
+        } else if (sectionId === 'daily') {
+            updateDailyTable();
+        }
+    }
+}
+
+function showMobileMenu() {
+    if (DOM.mobileNav) {
+        DOM.mobileNav.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function hideMobileMenu() {
+    if (DOM.mobileNav) {
+        DOM.mobileNav.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+}
+
+function setupNavigation() {
+    // Mobile menu toggle
+    if (DOM.menuToggle) {
+        DOM.menuToggle.addEventListener('click', showMobileMenu);
+        DOM.menuToggle.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                showMobileMenu();
+            }
+        });
+    }
+    
+    if (DOM.closeNav) {
+        DOM.closeNav.addEventListener('click', hideMobileMenu);
+    }
+    
+    // Bottom navigation
+    document.querySelectorAll('.nav-link').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const href = this.getAttribute('href');
+            if (href && href.startsWith('#')) {
+                const sectionId = href.substring(1);
+                showSection(sectionId);
+                hideMobileMenu();
+            }
+        });
+        
+        // Keyboard navigation
+        link.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                link.click();
+            }
+        });
+    });
+    
+    // Side navigation
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.preventDefault();
+            const href = this.getAttribute('href');
+            if (href && href.startsWith('#')) {
+                const sectionId = href.substring(1);
+                showSection(sectionId);
+                hideMobileMenu();
+            }
+        });
+        
+        // Keyboard navigation
+        item.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                item.click();
+            }
+        });
+    });
+    
+    // Desktop navigation
+    if (DOM.desktopNavLinks) {
+        DOM.desktopNavLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const href = this.getAttribute('href');
+                if (href && href.startsWith('#')) {
+                    const sectionId = href.substring(1);
+                    showSection(sectionId);
+                }
+            });
+            
+            // Keyboard navigation
+            link.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    link.click();
+                }
+            });
+        });
+    }
+    
+    // Close mobile menu when clicking outside
+    document.addEventListener('click', function(e) {
+        if (DOM.mobileNav && DOM.mobileNav.classList.contains('active') &&
+            !DOM.mobileNav.contains(e.target) && 
+            !DOM.menuToggle.contains(e.target)) {
+            hideMobileMenu();
+        }
+    });
+    
+    // Theme toggle
+    if (DOM.mobileThemeToggle) {
+        DOM.mobileThemeToggle.addEventListener('click', toggleTheme);
+        DOM.mobileThemeToggle.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                toggleTheme();
+            }
+        });
+    }
+    
+    if (DOM.navThemeToggle) {
+        DOM.navThemeToggle.addEventListener('click', toggleTheme);
+    }
+    
+    if (DOM.desktopThemeToggle) {
+        DOM.desktopThemeToggle.addEventListener('click', toggleTheme);
+        DOM.desktopThemeToggle.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                toggleTheme();
+            }
+        });
+    }
+    
+    // Handle hash change
+    window.addEventListener('hashchange', function() {
+        const hash = window.location.hash.substring(1);
+        if (hash && ['form', 'daily', 'weekly', 'monthly', 'export', 'settings'].includes(hash)) {
+            setTimeout(() => showSection(hash), 100);
+        }
+    });
+    
+    // Handle initial hash
+    if (window.location.hash) {
+        const hash = window.location.hash.substring(1);
+        if (hash && ['form', 'daily', 'weekly', 'monthly', 'export', 'settings'].includes(hash)) {
+            setTimeout(() => showSection(hash), 100);
+        }
+    }
+    
+    // Escape key to close modals/menus
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            if (DOM.dailyExportMenu && DOM.dailyExportMenu.classList.contains('show')) {
+                DOM.dailyExportMenu.classList.remove('show');
+                if (DOM.dailyExportButton) {
+                    DOM.dailyExportButton.setAttribute('aria-expanded', 'false');
+                }
+            }
+            closeDailyModal();
+            hideMobileMenu();
+        }
+    });
+}
+
+// ============================================
+// Event Listeners
+// ============================================
+
+function setupEventListeners() {
+    // Form submission
+    if (DOM.employeeForm) {
+        DOM.employeeForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const formData = {
+                name: DOM.employeeName ? DOM.employeeName.value : '',
+                type: Array.from(DOM.employeeType || []).find(radio => radio.checked)?.value,
+                clothes: DOM.dailyClothes ? DOM.dailyClothes.value : 0,
+                date: DOM.workDate ? DOM.workDate.value : '',
+                startTime: DOM.startTime ? DOM.startTime.value : '',
+                breakTime: DOM.breakTime ? DOM.breakTime.value : '',
+                endTime: DOM.endTime ? DOM.endTime.value : '',
+                notes: DOM.notes ? DOM.notes.value : ''
+            };
+            
+            const errors = validateForm(formData);
+            
+            if (errors.length > 0) {
+                errors.forEach(error => showToast(error, 'error'));
+                return;
+            }
+            
+            if (addEmployee(formData)) {
+                DOM.employeeForm.reset();
+                // Manually reset radio buttons
+                document.querySelectorAll('input[name="employeeType"]').forEach(radio => {
+                    radio.checked = false;
+                });
+                updateForm();
+                showSection('weekly');
+            }
+        });
+    }
+    
+    // Update form
+    if (DOM.updateForm) {
+        DOM.updateForm.addEventListener('click', () => {
+            const id = DOM.editId ? DOM.editId.value : '';
+            if (!id) return;
+            
+            const formData = {
+                name: DOM.employeeName ? DOM.employeeName.value : '',
+                type: Array.from(DOM.employeeType || []).find(radio => radio.checked)?.value,
+                clothes: DOM.dailyClothes ? DOM.dailyClothes.value : 0,
+                date: DOM.workDate ? DOM.workDate.value : '',
+                startTime: DOM.startTime ? DOM.startTime.value : '',
+                breakTime: DOM.breakTime ? DOM.breakTime.value : '',
+                endTime: DOM.endTime ? DOM.endTime.value : '',
+                notes: DOM.notes ? DOM.notes.value : ''
+            };
+            
+            const errors = validateForm(formData);
+            
+            if (errors.length > 0) {
+                errors.forEach(error => showToast(error, 'error'));
+                return;
+            }
+            
+            updateEmployee(id, formData);
+        });
+    }
+    
+    // Clear form
+    if (DOM.clearForm) {
+        DOM.clearForm.addEventListener('click', () => {
+            if (DOM.employeeForm) {
+                DOM.employeeForm.reset();
+            }
+            // Manually reset radio buttons
+            document.querySelectorAll('input[name="employeeType"]').forEach(radio => {
+                radio.checked = false;
+            });
+            updateForm();
+            cancelEditMode();
+            showToast('Form cleared', 'info');
+        });
+    }
+    
+    // Cancel edit
+    if (DOM.cancelEdit) {
+        DOM.cancelEdit.addEventListener('click', cancelEditMode);
+    }
+    
+    // Time input changes
+    if (DOM.startTime) {
+        DOM.startTime.addEventListener('change', updateTimeSummary);
+        DOM.startTime.addEventListener('input', updateTimeSummary);
+    }
+    if (DOM.breakTime) {
+        DOM.breakTime.addEventListener('change', updateTimeSummary);
+        DOM.breakTime.addEventListener('input', updateTimeSummary);
+    }
+    if (DOM.endTime) {
+        DOM.endTime.addEventListener('change', updateTimeSummary);
+        DOM.endTime.addEventListener('input', updateTimeSummary);
+    }
+    
+    // Add all today
+    if (DOM.addAllToday) {
+        DOM.addAllToday.addEventListener('click', addAllToday);
+    }
+    
+    // Save all daily entries
+    if (DOM.saveDailyEntries) {
+        DOM.saveDailyEntries.addEventListener('click', saveAllDailyEntries);
+    }
+    
+    // Import file
+    const importFile = document.getElementById('importFile');
+    if (importFile) {
+        importFile.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                if (file.size > 5 * 1024 * 1024) { // 5MB limit
+                    showToast('File too large (max 5MB)', 'error');
+                    e.target.value = '';
+                    return;
+                }
+                
+                if (file.type !== 'application/json') {
+                    showToast('Please select a JSON file', 'error');
+                    e.target.value = '';
+                    return;
+                }
+                
+                importData(file);
+            }
+            e.target.value = '';
+        });
+    }
+    
+    // Pagination
+    if (DOM.prevWeekly) {
+        DOM.prevWeekly.addEventListener('click', () => {
+            if (AppState.currentPage.weekly > 1) {
+                AppState.currentPage.weekly--;
+                updateTable('weekly');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        });
+    }
+    
+    if (DOM.nextWeekly) {
+        DOM.nextWeekly.addEventListener('click', () => {
+            const weeklyCount = AppState.employees.filter(e => e.type === 'weekly').length;
+            const totalPages = Math.ceil(weeklyCount / AppState.itemsPerPage);
+            
+            if (AppState.currentPage.weekly < totalPages) {
+                AppState.currentPage.weekly++;
+                updateTable('weekly');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        });
+    }
+    
+    if (DOM.prevMonthly) {
+        DOM.prevMonthly.addEventListener('click', () => {
+            if (AppState.currentPage.monthly > 1) {
+                AppState.currentPage.monthly--;
+                updateTable('monthly');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        });
+    }
+    
+    if (DOM.nextMonthly) {
+        DOM.nextMonthly.addEventListener('click', () => {
+            const monthlyCount = AppState.employees.filter(e => e.type === 'monthly').length;
+            const totalPages = Math.ceil(monthlyCount / AppState.itemsPerPage);
+            
+            if (AppState.currentPage.monthly < totalPages) {
+                AppState.currentPage.monthly++;
+                updateTable('monthly');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        });
+    }
+    
+    // Table sorting with visual feedback
+    document.querySelectorAll('[data-sort]').forEach(th => {
+        th.addEventListener('click', () => {
+            const table = th.closest('.data-table').id;
+            const type = table.includes('weekly') ? 'weekly' : 'monthly';
+            const key = th.dataset.sort;
+            
+            if (AppState.sortConfig[type].key === key) {
+                AppState.sortConfig[type].direction = 
+                    AppState.sortConfig[type].direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                AppState.sortConfig[type] = { key, direction: 'asc' };
+            }
+            
+            AppState.currentPage[type] = 1; // Reset to first page when sorting
+            updateTable(type);
+        });
+        
+        // Keyboard support
+        th.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                th.click();
+            }
+        });
+    });
+    
+    // Set current year in footer
+    const currentYear = document.getElementById('currentYear');
+    if (currentYear) {
+        currentYear.textContent = new Date().getFullYear();
+    }
+    
+    // Auto-save indicator
+    setInterval(() => {
+        if (AppState.lastSaveTime && (new Date() - AppState.lastSaveTime) > 30000) {
+            // Save every 30 seconds if there are changes
+            saveData();
+        }
+    }, 30000);
+    
+    // Window resize handling
+    window.addEventListener('resize', () => {
+        // Update table responsiveness
+        updateDailyTable();
+    });
+}
+
+// ============================================
+// Initialize Application
+// ============================================
+
+function init() {
+    console.log('Initializing Garment Management System v3.2.2');
+    
+    // Initialize DOM cache
+    initDOM();
+    
+    initTheme();
+    setupNavigation();
+    setupEventListeners();
+    loadData();
+    updateForm();
+    initDailyEntry();
+    
+    // Create save indicator
+    createSaveIndicator();
+    
+    // Initial section based on hash
+    const hash = window.location.hash.substring(1);
+    if (hash && ['form', 'daily', 'weekly', 'monthly', 'export', 'settings'].includes(hash)) {
+        setTimeout(() => showSection(hash), 100);
+    } else {
+        showSection('form');
+    }
+    
+    // Show welcome message
+    setTimeout(() => {
+        showToast('Garment Management System v3.2.2 loaded successfully', 'success', 3000);
+    }, 1000);
+    
+    // Add keyboard shortcuts help
+    document.addEventListener('keydown', function(e) {
+        // Ctrl+S to save
+        if (e.ctrlKey && e.key === 's') {
+            e.preventDefault();
+            saveData();
+        }
+        // Ctrl+E to export
+        if (e.ctrlKey && e.key === 'e') {
+            e.preventDefault();
+            showSection('export');
+        }
+    });
+}
+
+function createSaveIndicator() {
+    const indicator = document.createElement('div');
+    indicator.id = 'saveIndicator';
+    indicator.className = 'save-indicator';
+    indicator.innerHTML = '<i class="fas fa-save"></i> <span>Auto-saved</span>';
+    indicator.style.display = 'none';
+    document.body.appendChild(indicator);
+    
+    DOM.saveIndicator = indicator;
+}
+
+// Start the application
+document.addEventListener('DOMContentLoaded', init);
+
+// Global functions for HTML onclick handlers
+window.clearAllData = clearAllData;
+window.clearDailyEntries = clearDailyEntries;
+window.exportToPDF = exportToPDF;
+window.exportToExcel = exportToExcel;
+window.exportBackup = exportBackup;
+window.deleteEmployee = deleteEmployee;
+window.editEmployee = editEmployee;
+window.toggleTheme = toggleTheme;
+window.openDailyModal = openDailyModal;
+window.saveDailyEntry = saveDailyEntry;
+window.removeDailyEntry = removeDailyEntry;
+window.toggleDailyExportMenu = toggleDailyExportMenu;
+window.exportDailyToPDF = exportDailyToPDF;
+window.exportDailyToExcel = exportDailyToExcel;
+window.showSection = showSection;
+window.closeDailyModal = closeDailyModal;
+window.addAllToday = addAllToday;
+window.saveAllDailyEntries = saveAllDailyEntries;
+
+// Export for testing
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        AppState,
+        calculateNetHours,
+        calculateTimeDifference,
+        formatDate,
+        formatTime
+    };
 }
