@@ -730,7 +730,23 @@ function updateDailyTable() {
             <tr data-employee="${employeeName}">
                 <td><div class="employee-info"><strong>${employeeName}</strong>${hasUnsavedChanges ? '<span class="unsaved-badge">*</span>' : ''}</div></td>
                 <td><span class="badge ${getEmployeeTypeClass(employeeName)}">${getEmployeeType(employeeName)}</span></td>
-                <td><input type="number" class="daily-input" value="${displayValue}" min="0" data-employee="${employeeName}" placeholder="0" data-original="${entry.clothes}"></td>
+                <td>
+                    <div class="mobile-input-container">
+                        <input type="number" 
+                               class="daily-input mobile-number-input" 
+                               value="${displayValue}" 
+                               min="0" 
+                               data-employee="${employeeName}" 
+                               placeholder="0" 
+                               data-original="${entry.clothes}"
+                               inputmode="numeric"
+                               pattern="[0-9]*">
+                        <span class="input-controls">
+                            <button type="button" class="input-btn minus" data-action="decrement" data-employee="${employeeName}">−</button>
+                            <button type="button" class="input-btn plus" data-action="increment" data-employee="${employeeName}">+</button>
+                        </span>
+                    </div>
+                </td>
                 <td><div class="time-cell"><small>${formatTime(entry.startTime)} - ${formatTime(entry.endTime)}</small><div>Break: ${formatTime(entry.breakTime)} (${formatHours(breakDuration)}h)</div></div></td>
                 <td><span class="text-primary daily-hours" data-employee="${employeeName}">${formatHours(netHours)}h</span></td>
                 <td><div class="actions"><button class="action-btn edit" onclick="openDailyModal('${employeeName.replace(/'/g, "\\'")}')" title="Edit Times"><i class="fas fa-clock"></i></button><button class="action-btn delete" onclick="removeDailyEntry('${employeeName.replace(/'/g, "\\'")}')" title="Remove"><i class="fas fa-trash"></i></button></div></td>
@@ -740,17 +756,85 @@ function updateDailyTable() {
     
     if (DOM.dailyTableBody) DOM.dailyTableBody.innerHTML = html;
     
+    // Add mobile-friendly event handlers
     document.querySelectorAll('.daily-input').forEach(input => {
-        input.addEventListener('input', function() {
+        // Use 'input' event instead of 'change' for immediate feedback
+        input.addEventListener('input', function(e) {
+            e.stopPropagation(); // Prevent event bubbling
             const employeeName = this.getAttribute('data-employee');
             const value = parseInt(this.value) || 0;
             dailyInputChanges.set(employeeName, value);
             updateRowUnsavedStatus(employeeName, true);
+            
+            // Update the hours calculation for this row
+            updateRowHours(employeeName);
         });
+        
+        // Add focus/blur handlers to prevent table re-renders during input
+        input.addEventListener('focus', function(e) {
+            e.stopPropagation();
+            this.setAttribute('data-focused', 'true');
+        });
+        
+        input.addEventListener('blur', function(e) {
+            e.stopPropagation();
+            this.removeAttribute('data-focused');
+        });
+        
+        // Prevent the table row from capturing touch events
+        input.addEventListener('touchstart', function(e) {
+            e.stopPropagation();
+        }, { passive: true });
+    });
+    
+    // Add increment/decrement button handlers
+    document.querySelectorAll('.input-btn').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const employeeName = this.getAttribute('data-employee');
+            const action = this.getAttribute('data-action');
+            const input = this.closest('.mobile-input-container').querySelector('.daily-input');
+            
+            let currentValue = parseInt(input.value) || 0;
+            if (action === 'increment') {
+                currentValue++;
+            } else if (action === 'decrement') {
+                currentValue = Math.max(0, currentValue - 1);
+            }
+            
+            input.value = currentValue;
+            dailyInputChanges.set(employeeName, currentValue);
+            updateRowUnsavedStatus(employeeName, true);
+            updateRowHours(employeeName);
+            
+            // Trigger input event
+            input.dispatchEvent(new Event('input', { bubbles: false }));
+        });
+    });
+    
+    // Prevent table row clicks from interfering with input focus
+    document.querySelectorAll('#dailyTableBody tr').forEach(row => {
+        row.addEventListener('click', function(e) {
+            // If click is on an input or button, let it handle the event
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || 
+                e.target.closest('button') || e.target.closest('input')) {
+                return;
+            }
+        });
+        
+        row.addEventListener('touchstart', function(e) {
+            // Prevent row from capturing touch events meant for inputs
+            if (e.target.tagName === 'INPUT' || e.target.closest('input')) {
+                e.stopPropagation();
+            }
+        }, { passive: true });
     });
     
     updateDailyStats();
 }
+
 
 function updateRowUnsavedStatus(employeeName, hasChanges) {
     const row = document.querySelector(`tr[data-employee="${employeeName}"]`);
@@ -1123,6 +1207,21 @@ function updateDailyRow(employeeName) {
     
     updateDailyStats();
 }
+function updateRowHours(employeeName) {
+    const date = DOM.dailyDate ? DOM.dailyDate.value : AppState.selectedDate;
+    const entry = AppState.dailyEntries[date]?.[employeeName] || {
+        startTime: '09:00', breakTime: '13:00', endTime: '17:00'
+    };
+    
+    const netHours = calculateNetHours(entry.startTime, entry.breakTime, entry.endTime);
+    const hoursSpan = document.querySelector(`.daily-hours[data-employee="${employeeName}"]`);
+    if (hoursSpan) {
+        hoursSpan.textContent = `${formatHours(netHours)}h`;
+    }
+    
+    updateDailyStats();
+}
+
 
 function removeDailyEntry(employeeName) {
     const date = DOM.dailyDate ? DOM.dailyDate.value : AppState.selectedDate;
@@ -2029,6 +2128,28 @@ function showSection(sectionId) {
         else if (sectionId === 'daily') updateDailyTable();
     }
 }
+// In setupEventListeners or similar, add:
+document.addEventListener('DOMContentLoaded', function() {
+    // Prevent window resize from updating table during input
+    let resizeTimer;
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimer);
+        // Check if any input is currently focused
+        const hasFocusedInput = document.querySelector('.daily-input[data-focused="true"]');
+        if (!hasFocusedInput) {
+            resizeTimer = setTimeout(() => {
+                updateDailyTable();
+            }, 250);
+        }
+    });
+    
+    // Prevent body clicks from interfering
+    document.body.addEventListener('click', function(e) {
+        if (e.target.classList.contains('daily-input')) {
+            e.stopPropagation();
+        }
+    }, true); // Use capture phase
+});
 
 function showMobileMenu() {
     if (DOM.mobileNav) {
