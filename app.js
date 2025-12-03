@@ -1,6 +1,6 @@
 // ============================================
 // Garment Worker Management System
-// Version 3.2.2 - COMPLETE FIXED VERSION
+// Version 3.2.3 - COMPLETELY FIXED VERSION
 // ============================================
 
 // Application State
@@ -100,6 +100,7 @@ function initDOM() {
         desktopTotal: document.getElementById('desktopTotal'),
         desktopGarments: document.getElementById('desktopGarments'),
         desktopHours: document.getElementById('desktopHours'),
+        desktopEfficiency: document.getElementById('desktopEfficiency'), // ADDED
         footerTotal: document.getElementById('footerTotal'),
         footerGarments: document.getElementById('footerGarments'),
         footerEfficiency: document.getElementById('footerEfficiency'),
@@ -118,6 +119,8 @@ function initDOM() {
         settingsTotal: document.getElementById('settingsTotal'),
         settingsStorage: document.getElementById('settingsStorage'),
         settingsBackup: document.getElementById('settingsBackup'),
+        settingsWeekly: document.getElementById('settingsWeekly'), // ADDED
+        settingsMonthly: document.getElementById('settingsMonthly'), // ADDED
         
         // Export menu
         dailyExportMenu: document.getElementById('dailyExportMenu'),
@@ -382,7 +385,7 @@ function showToast(message, type = 'success', duration = 5000) {
 }
 
 // ============================================
-// Form Validation
+// Form Validation - FIXED duplicate checking
 // ============================================
 
 function validateForm(formData) {
@@ -430,15 +433,16 @@ function validateForm(formData) {
         errors.push('Break time must be before end time');
     }
     
-    // Check for duplicate entry (same name and date)
-    if (formData.name && formData.date && !DOM.editId.value) {
+    // FIXED: Check for duplicate entry (same name, date, AND type)
+    if (formData.name && formData.date && formData.type && !DOM.editId.value) {
         const isDuplicate = AppState.employees.some(emp => 
             emp.name.toLowerCase() === formData.name.toLowerCase().trim() &&
-            emp.date === formData.date
+            emp.date === formData.date &&
+            emp.type === formData.type
         );
         
         if (isDuplicate) {
-            errors.push(`Employee "${formData.name}" already has an entry for ${formatDate(formData.date)}`);
+            errors.push(`Employee "${formData.name}" already has a ${formData.type} entry for ${formatDate(formData.date)}`);
         }
     }
     
@@ -540,15 +544,16 @@ function updateEmployee(id, formData) {
     if (index !== -1) {
         const oldEmployee = AppState.employees[index];
         
-        // Check for duplicates (excluding current employee)
+        // FIXED: Check for duplicates with same name, date, AND type (excluding current employee)
         const isDuplicate = AppState.employees.some((emp, idx) => 
             idx !== index &&
             emp.name.toLowerCase() === formData.name.toLowerCase().trim() &&
-            emp.date === formData.date
+            emp.date === formData.date &&
+            emp.type === formData.type
         );
         
         if (isDuplicate) {
-            showToast(`Employee "${formData.name}" already has an entry for ${formatDate(formData.date)}`, 'error');
+            showToast(`Employee "${formData.name}" already has a ${formData.type} entry for ${formatDate(formData.date)}`, 'error');
             return false;
         }
         
@@ -1373,8 +1378,24 @@ function exportDailyToPDF() {
         let totalBreakHours = 0;
         
         const tableData = [];
-        Object.keys(dailyData).forEach(employeeName => {
-            const entry = dailyData[employeeName];
+        
+        // FIXED: Use unique employees from AppState.employees to avoid duplicates
+        const allEmployees = [];
+        AppState.employees.forEach(emp => {
+            if (!allEmployees.includes(emp.name)) {
+                allEmployees.push(emp.name);
+            }
+        });
+        
+        allEmployees.sort().forEach(employeeName => {
+            const entry = dailyData[employeeName] || {
+                clothes: 0,
+                startTime: '09:00',
+                breakTime: '13:00',
+                endTime: '17:00',
+                notes: ''
+            };
+            
             const netHours = calculateNetHours(entry.startTime, entry.breakTime, entry.endTime);
             const breakHours = calculateActualBreakDuration(entry.startTime, entry.breakTime, entry.endTime);
             
@@ -1406,7 +1427,7 @@ function exportDailyToPDF() {
         doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
         doc.text(`Date: ${formatDate(date)}`, 10, yPos);
-        doc.text(`Total Employees: ${Object.keys(dailyData).length}`, 70, yPos);
+        doc.text(`Total Employees: ${allEmployees.length}`, 70, yPos);
         doc.text(`Active Employees: ${activeCount}`, 130, yPos);
         
         yPos += 6;
@@ -1503,8 +1524,22 @@ function exportDailyToExcel() {
         let totalHours = 0;
         let totalBreakHours = 0;
         
-        Object.keys(dailyData).forEach(employeeName => {
-            const entry = dailyData[employeeName];
+        // FIXED: Use unique employees to avoid duplicates
+        const allEmployees = [];
+        AppState.employees.forEach(emp => {
+            if (!allEmployees.includes(emp.name)) {
+                allEmployees.push(emp.name);
+            }
+        });
+        
+        allEmployees.sort().forEach(employeeName => {
+            const entry = dailyData[employeeName] || {
+                clothes: 0,
+                startTime: '09:00',
+                breakTime: '13:00',
+                endTime: '17:00',
+                notes: ''
+            };
             const netHours = calculateNetHours(entry.startTime, entry.breakTime, entry.endTime);
             const breakHours = calculateActualBreakDuration(entry.startTime, entry.breakTime, entry.endTime);
             
@@ -1527,7 +1562,7 @@ function exportDailyToExcel() {
         
         dailyDataArray.push(['']);
         dailyDataArray.push(['SUMMARY']);
-        dailyDataArray.push(['Total Employees', Object.keys(dailyData).length]);
+        dailyDataArray.push(['Total Employees', allEmployees.length]);
         dailyDataArray.push(['Active Employees', Object.values(dailyData).filter(e => e.clothes > 0).length]);
         dailyDataArray.push(['Total Garments', totalGarments]);
         dailyDataArray.push(['Total Hours', parseFloat(totalHours.toFixed(2))]);
@@ -1619,14 +1654,23 @@ function exportToPDF() {
         
         yPos += 15;
         
-        // Weekly Employees Table
+        // Weekly Employees Table - FIXED: Use unique employees to avoid duplicates
         if (weekly.length > 0) {
             doc.setFontSize(10);
             doc.setFont('helvetica', 'bold');
             doc.setTextColor(37, 99, 235);
             doc.text('WEEKLY EMPLOYEES', 10, yPos);
             
-            const weeklyData = weekly.map(emp => [
+            // Create a map to track unique weekly employees by name and date
+            const weeklyMap = new Map();
+            weekly.forEach(emp => {
+                const key = `${emp.name}_${emp.date}`;
+                if (!weeklyMap.has(key)) {
+                    weeklyMap.set(key, emp);
+                }
+            });
+            
+            const weeklyData = Array.from(weeklyMap.values()).map(emp => [
                 emp.name.substring(0, 20),
                 formatDate(emp.date),
                 emp.clothes.toString(),
@@ -1669,7 +1713,7 @@ function exportToPDF() {
             yPos = doc.lastAutoTable.finalY + 10;
         }
         
-        // Monthly Employees Table
+        // Monthly Employees Table - FIXED: Use unique employees to avoid duplicates
         if (monthly.length > 0) {
             if (yPos > 200) {
                 doc.addPage();
@@ -1681,7 +1725,16 @@ function exportToPDF() {
             doc.setTextColor(124, 58, 237);
             doc.text('MONTHLY EMPLOYEES', 10, yPos);
             
-            const monthlyData = monthly.map(emp => [
+            // Create a map to track unique monthly employees by name and date
+            const monthlyMap = new Map();
+            monthly.forEach(emp => {
+                const key = `${emp.name}_${emp.date}`;
+                if (!monthlyMap.has(key)) {
+                    monthlyMap.set(key, emp);
+                }
+            });
+            
+            const monthlyData = Array.from(monthlyMap.values()).map(emp => [
                 emp.name.substring(0, 20),
                 formatDate(emp.date),
                 emp.clothes.toString(),
@@ -1729,7 +1782,7 @@ function exportToPDF() {
             doc.setFontSize(7);
             doc.setTextColor(100, 116, 139);
             doc.text(`Page ${i} of ${pageCount}`, pageWidth / 2, 290, { align: 'center' });
-            doc.text('© Garment Management System v3.2.2', pageWidth / 2, 295, { align: 'center' });
+            doc.text('© Garment Management System v3.2.3', pageWidth / 2, 295, { align: 'center' });
         }
         
         const fileName = `Garment_Report_${new Date().toISOString().split('T')[0]}.pdf`;
@@ -1750,8 +1803,21 @@ function exportToExcel() {
             return;
         }
         
-        const weekly = AppState.employees.filter(e => e.type === 'weekly');
-        const monthly = AppState.employees.filter(e => e.type === 'monthly');
+        // FIXED: Use unique employees to avoid duplicates
+        const weeklyMap = new Map();
+        const monthlyMap = new Map();
+        
+        AppState.employees.forEach(emp => {
+            const key = `${emp.name}_${emp.date}_${emp.type}`;
+            if (emp.type === 'weekly' && !weeklyMap.has(key)) {
+                weeklyMap.set(key, emp);
+            } else if (emp.type === 'monthly' && !monthlyMap.has(key)) {
+                monthlyMap.set(key, emp);
+            }
+        });
+        
+        const weekly = Array.from(weeklyMap.values());
+        const monthly = Array.from(monthlyMap.values());
         
         const wb = XLSX.utils.book_new();
         wb.Props = {
@@ -1882,7 +1948,7 @@ function exportBackup() {
                 exportedAt: new Date().toISOString(),
                 totalEmployees: AppState.employees.length,
                 dailyEntriesCount: Object.keys(AppState.dailyEntries).length,
-                version: '3.2.2'
+                version: '3.2.3'
             },
             employees: AppState.employees,
             nextId: AppState.nextId,
@@ -1913,7 +1979,7 @@ function exportBackup() {
 }
 
 // ============================================
-// UI Management
+// UI Management - FIXED
 // ============================================
 
 function updateUI() {
@@ -1948,7 +2014,19 @@ function updateTable(type) {
     
     if (!tableBody || !emptyState) return;
     
+    // FIXED: Use unique employees by name and date to avoid duplicates
     let employees = AppState.employees.filter(emp => emp.type === type);
+    
+    // Remove duplicates (same name and date)
+    const uniqueMap = new Map();
+    employees.forEach(emp => {
+        const key = `${emp.name}_${emp.date}`;
+        if (!uniqueMap.has(key)) {
+            uniqueMap.set(key, emp);
+        }
+    });
+    
+    employees = Array.from(uniqueMap.values());
     
     // Update sort indicators
     updateSortIndicators(type);
@@ -2138,11 +2216,14 @@ function updateStats() {
     if (DOM.desktopTotal) DOM.desktopTotal.textContent = AppState.employees.length;
     if (DOM.desktopGarments) DOM.desktopGarments.textContent = totalClothes;
     if (DOM.desktopHours) DOM.desktopHours.textContent = formatHours(totalHours);
+    if (DOM.desktopEfficiency) DOM.desktopEfficiency.textContent = efficiency; // FIXED
     if (DOM.footerTotal) DOM.footerTotal.textContent = AppState.employees.length;
     if (DOM.footerGarments) DOM.footerGarments.textContent = totalClothes;
     if (DOM.footerEfficiency) DOM.footerEfficiency.textContent = efficiency;
     
     if (DOM.settingsTotal) DOM.settingsTotal.textContent = AppState.employees.length;
+    if (DOM.settingsWeekly) DOM.settingsWeekly.textContent = weeklyEmployees.length; // FIXED
+    if (DOM.settingsMonthly) DOM.settingsMonthly.textContent = monthlyEmployees.length; // FIXED
 }
 
 function updatePreview() {
@@ -2397,7 +2478,7 @@ function setupNavigation() {
 }
 
 // ============================================
-// Event Listeners
+// Event Listeners - FIXED: Added daily export button
 // ============================================
 
 function setupEventListeners() {
@@ -2497,6 +2578,11 @@ function setupEventListeners() {
     if (DOM.endTime) {
         DOM.endTime.addEventListener('change', updateTimeSummary);
         DOM.endTime.addEventListener('input', updateTimeSummary);
+    }
+    
+    // Daily Export Button - FIXED: Added event listener
+    if (DOM.dailyExportButton) {
+        DOM.dailyExportButton.addEventListener('click', toggleDailyExportMenu);
     }
     
     // Add all today
@@ -2633,7 +2719,7 @@ function setupEventListeners() {
 // ============================================
 
 function init() {
-    console.log('Initializing Garment Management System v3.2.2');
+    console.log('Initializing Garment Management System v3.2.3');
     
     // Initialize DOM cache
     initDOM();
@@ -2658,7 +2744,7 @@ function init() {
     
     // Show welcome message
     setTimeout(() => {
-        showToast('Garment Management System v3.2.2 loaded successfully', 'success', 3000);
+        showToast('Garment Management System v3.2.3 loaded successfully', 'success', 3000);
     }, 1000);
     
     // Add keyboard shortcuts help
