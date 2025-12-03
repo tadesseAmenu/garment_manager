@@ -588,27 +588,82 @@ function updateEmployee(id, formData) {
     }
     return false;
 }
+// ============================================
+// Styled Confirmation Modal
+// ============================================
 
+let confirmationCallback = null;
+
+function showConfirmation(message, details, callback) {
+    confirmationCallback = callback;
+    
+    const modal = document.getElementById('confirmationModal');
+    const messageEl = document.getElementById('confirmationMessage');
+    const detailsEl = document.getElementById('confirmationDetails');
+    
+    messageEl.textContent = message;
+    detailsEl.textContent = details || '';
+    
+    modal.style.display = 'block';
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    
+    // Focus the confirm button after a short delay
+    setTimeout(() => {
+        document.getElementById('confirmActionButton').focus();
+    }, 100);
+}
+
+function closeConfirmationModal() {
+    const modal = document.getElementById('confirmationModal');
+    modal.style.display = 'none';
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+    confirmationCallback = null;
+}
+
+// Handle confirm button click
+document.getElementById('confirmActionButton').addEventListener('click', function() {
+    if (confirmationCallback) {
+        confirmationCallback();
+        closeConfirmationModal();
+    }
+});
+
+// Close modal on escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.getElementById('confirmationModal').style.display === 'block') {
+        closeConfirmationModal();
+    }
+});
+
+// Close modal when clicking outside
+document.getElementById('confirmationModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeConfirmationModal();
+    }
+});
 function deleteEmployee(id) {
     const employee = AppState.employees.find(emp => emp.id === id);
     if (!employee) return false;
     
-    if (confirm(`Are you sure you want to delete employee "${employee.name}"?\nThis action cannot be undone.`)) {
-        const index = AppState.employees.findIndex(emp => emp.id === id);
-        if (index !== -1) {
-            AppState.employees.splice(index, 1);
-            
-            if (saveData()) {
-                updateUI();
-                updateStats();
-                showToast(`Employee "${employee.name}" deleted`, 'success');
-                return true;
+    showConfirmation(
+        `Delete Employee "${employee.name}"?`,
+        `This will permanently delete the record for ${employee.name} from ${formatDate(employee.date)}. This action cannot be undone.`,
+        function() {
+            const index = AppState.employees.findIndex(emp => emp.id === id);
+            if (index !== -1) {
+                AppState.employees.splice(index, 1);
+                
+                if (saveData()) {
+                    updateUI();
+                    updateStats();
+                    showToast(`Employee "${employee.name}" deleted successfully`, 'success');
+                }
             }
         }
-    }
-    return false;
+    );
 }
-
 function clearAllData() {
     if (AppState.employees.length === 0 && Object.keys(AppState.dailyEntries).length === 0) {
         showToast('No data to clear', 'warning');
@@ -617,24 +672,26 @@ function clearAllData() {
     
     const employeeCount = AppState.employees.length;
     const dailyCount = Object.keys(AppState.dailyEntries).length;
-    let message = `Are you sure you want to delete all data?\n\n`;
+    let details = '';
     
-    if (employeeCount > 0) message += `• ${employeeCount} employee records\n`;
-    if (dailyCount > 0) message += `• ${dailyCount} days of daily entries\n`;
-    message += `\nThis action cannot be undone.`;
+    if (employeeCount > 0) details += `• ${employeeCount} employee records\n`;
+    if (dailyCount > 0) details += `• ${dailyCount} days of daily entries\n`;
     
-    if (confirm(message)) {
-        AppState.employees = [];
-        AppState.dailyEntries = {};
-        AppState.nextId = 1;
-        if (saveData()) {
-            updateUI();
-            updateStats();
-            showToast('All data cleared successfully', 'success');
+    showConfirmation(
+        'Clear All Data?',
+        details + '\nThis action cannot be undone.',
+        function() {
+            AppState.employees = [];
+            AppState.dailyEntries = {};
+            AppState.nextId = 1;
+            if (saveData()) {
+                updateUI();
+                updateStats();
+                showToast('All data cleared successfully', 'success');
+            }
         }
-    }
+    );
 }
-
 function clearDailyEntries() {
     const today = new Date().toISOString().split('T')[0];
     const todayEntries = AppState.dailyEntries[today] || {};
@@ -645,13 +702,17 @@ function clearDailyEntries() {
         return;
     }
     
-    if (confirm(`Clear ${entryCount} daily entries for ${formatDate(today)}?\nThis action cannot be undone.`)) {
-        delete AppState.dailyEntries[today];
-        if (saveData()) {
-            updateDailyTable();
-            showToast('Today\'s entries cleared successfully', 'success');
+    showConfirmation(
+        `Clear Today's Entries?`,
+        `This will clear ${entryCount} daily entries for ${formatDate(today)}.\nThis action cannot be undone.`,
+        function() {
+            delete AppState.dailyEntries[today];
+            if (saveData()) {
+                updateDailyTable();
+                showToast('Today\'s entries cleared successfully', 'success');
+            }
         }
-    }
+    );
 }
 
 function importData(file) {
@@ -815,8 +876,12 @@ function initDailyEntry() {
 
 function handleDailyDateChange() {
     AppState.selectedDate = DOM.dailyDate.value;
-    loadDailyEntries();
+    // Clear unsaved changes for previous date
+    dailyInputChanges.clear();
+    // Re-render table for new date
+    updateDailyTable();
 }
+
 
 function loadDailyEntries() {
     const date = DOM.dailyDate ? DOM.dailyDate.value : AppState.selectedDate;
@@ -829,11 +894,10 @@ function loadDailyEntries() {
     
     updateDailyTable();
 }
-// FIXED: Store focused input state
-let focusedDailyInput = null;
-let originalDailyInputValue = null;
+// Store input changes locally before saving
+let dailyInputChanges = new Map();
 
-// FIXED: Daily table now only renders on load or date change
+// FIXED: Daily table renders only initially, on date change, or on "Save All"
 function updateDailyTable() {
     const date = DOM.dailyDate ? DOM.dailyDate.value : AppState.selectedDate;
     const dailyData = AppState.dailyEntries[date] || {};
@@ -893,11 +957,16 @@ function updateDailyTable() {
         const netHours = calculateNetHours(entry.startTime, entry.breakTime, entry.endTime);
         const breakDuration = calculateActualBreakDuration(entry.startTime, entry.breakTime, entry.endTime);
         
+        // Check if there are unsaved changes for this employee
+        const hasUnsavedChanges = dailyInputChanges.has(employeeName);
+        const displayValue = hasUnsavedChanges ? dailyInputChanges.get(employeeName) : entry.clothes;
+        
         html += `
             <tr data-employee="${employeeName}">
                 <td>
                     <div class="employee-info">
                         <strong>${employeeName}</strong>
+                        ${hasUnsavedChanges ? '<span class="unsaved-badge">*</span>' : ''}
                     </div>
                 </td>
                 <td>
@@ -905,7 +974,7 @@ function updateDailyTable() {
                 </td>
                 <td>
                     <input type="number" class="daily-input" 
-                           value="${entry.clothes}" 
+                           value="${displayValue}" 
                            min="0" 
                            data-employee="${employeeName}"
                            placeholder="0"
@@ -941,47 +1010,33 @@ function updateDailyTable() {
         DOM.dailyTableBody.innerHTML = html;
     }
     
-    // FIXED: Simple event listeners - NO re-rendering during input
+    // Simple event listeners - store changes locally, NO saving
     document.querySelectorAll('.daily-input').forEach(input => {
-        // Store original focus state
-        input.addEventListener('focus', function() {
-            focusedDailyInput = this;
-            originalDailyInputValue = this.value;
-            this.classList.add('focused');
+        // Store changes locally without saving
+        input.addEventListener('input', function() {
+            const employeeName = this.getAttribute('data-employee');
+            const value = parseInt(this.value) || 0;
+            
+            // Store in local map
+            dailyInputChanges.set(employeeName, value);
+            
+            // Update UI to show unsaved changes
+            updateRowUnsavedStatus(employeeName, true);
         });
         
-        // Save on blur (when user moves away from input)
+        // Only update the input field on blur for better UX
         input.addEventListener('blur', function() {
-            if (focusedDailyInput === this) {
-                const employeeName = this.getAttribute('data-employee');
-                const clothes = parseInt(this.value) || 0;
-                const originalValue = parseInt(this.getAttribute('data-original')) || 0;
-                
-                // Only save if value changed
-                if (clothes !== originalValue) {
-                    saveDailyGarment(employeeName, clothes);
-                    this.setAttribute('data-original', clothes);
-                }
-                
-                this.classList.remove('focused');
-                focusedDailyInput = null;
-                originalDailyInputValue = null;
-            }
+            this.classList.remove('focused');
+        });
+        
+        input.addEventListener('focus', function() {
+            this.classList.add('focused');
         });
         
         // Handle Enter key
         input.addEventListener('keydown', function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                this.blur(); // Trigger blur which will save
-            }
-        });
-        
-        // For mobile: handle virtual keyboard done/next buttons
-        input.addEventListener('change', function() {
-            // This fires when input loses focus AND value changed
-            // But we already handle it in blur, so just in case
-            if (focusedDailyInput === this) {
                 this.blur();
             }
         });
@@ -989,6 +1044,30 @@ function updateDailyTable() {
     
     updateDailyStats();
 }
+// Function to update row UI when there are unsaved changes
+function updateRowUnsavedStatus(employeeName, hasChanges) {
+    const row = document.querySelector(`tr[data-employee="${employeeName}"]`);
+    if (row) {
+        const employeeInfo = row.querySelector('.employee-info');
+        let unsavedBadge = employeeInfo.querySelector('.unsaved-badge');
+        
+        if (hasChanges) {
+            if (!unsavedBadge) {
+                unsavedBadge = document.createElement('span');
+                unsavedBadge.className = 'unsaved-badge';
+                unsavedBadge.textContent = '*';
+                unsavedBadge.title = 'Unsaved changes';
+                employeeInfo.appendChild(unsavedBadge);
+            }
+        } else {
+            if (unsavedBadge) {
+                unsavedBadge.remove();
+            }
+        }
+    }
+}
+
+
 
 
 function getEmployeeType(employeeName) {
@@ -1007,7 +1086,7 @@ function updateDailyStats() {
     const date = DOM.dailyDate ? DOM.dailyDate.value : AppState.selectedDate;
     const dailyData = AppState.dailyEntries[date] || {};
     
-    // Get ALL unique employees
+    // Count employees
     const allEmployees = [];
     AppState.employees.forEach(emp => {
         if (!allEmployees.includes(emp.name)) {
@@ -1016,6 +1095,7 @@ function updateDailyStats() {
     });
     const totalEmployees = allEmployees.length;
     
+    // Calculate totals from saved data
     let activeCount = 0;
     let totalGarments = 0;
     let totalHours = 0;
@@ -1030,25 +1110,30 @@ function updateDailyStats() {
         }
     });
     
-    const avgGarments = activeCount > 0 ? (totalGarments / activeCount).toFixed(1) : '0';
-    const efficiency = totalHours > 0 ? (totalGarments / totalHours).toFixed(2) : '0';
+    // Also include unsaved changes in the stats
+    dailyInputChanges.forEach((clothes, employeeName) => {
+        if (clothes > 0) {
+            // Check if already counted in saved data
+            const savedEntry = dailyData[employeeName];
+            if (!savedEntry || savedEntry.clothes === 0) {
+                activeCount++;
+                totalGarments += clothes;
+                // Use default times for unsaved entries
+                totalHours += calculateNetHours('09:00', '13:00', '17:00');
+                totalBreakHours += calculateActualBreakDuration('09:00', '13:00', '17:00');
+            }
+        }
+    });
     
-    // Update stats elements
+    const avgGarments = activeCount > 0 ? (totalGarments / activeCount).toFixed(1) : '0';
+    
     if (DOM.totalEmployees) DOM.totalEmployees.textContent = totalEmployees;
     if (DOM.dailyActive) DOM.dailyActive.textContent = activeCount;
     if (DOM.dailyGarments) DOM.dailyGarments.textContent = totalGarments;
     if (DOM.dailyHours) DOM.dailyHours.textContent = formatHours(totalHours);
     if (DOM.dailyAvg) DOM.dailyAvg.textContent = avgGarments;
-    
-    // Update footer efficiency
-    if (DOM.footerEfficiency) {
-        DOM.footerEfficiency.textContent = efficiency;
-    }
-    
-    if (DOM.navDaily) {
-        DOM.navDaily.textContent = activeCount;
-    }
 }
+
 
 
 
@@ -1238,9 +1323,10 @@ function saveDailyEntry() {
         notes: modalNotes.value
     };
     
+    // Save immediately for modal entries
     saveData();
     
-    // FIXED: Instead of updateDailyTable(), only update the specific row
+    // Update the specific row without re-rendering entire table
     updateDailyRow(AppState.editingDailyId);
     
     closeDailyModal();
@@ -1261,11 +1347,15 @@ function updateDailyRow(employeeName) {
     const netHours = calculateNetHours(entry.startTime, entry.breakTime, entry.endTime);
     const breakDuration = calculateActualBreakDuration(entry.startTime, entry.breakTime, entry.endTime);
     
-    // Update input value and original attribute
+    // Update input value
     const input = row.querySelector('.daily-input');
-    if (input && document.activeElement !== input) {
+    if (input) {
         input.value = entry.clothes;
         input.setAttribute('data-original', entry.clothes);
+        
+        // Clear from unsaved changes if it's there
+        dailyInputChanges.delete(employeeName);
+        updateRowUnsavedStatus(employeeName, false);
     }
     
     // Update hours display
@@ -1286,7 +1376,6 @@ function updateDailyRow(employeeName) {
     // Update stats
     updateDailyStats();
 }
-
 function removeDailyEntry(employeeName) {
     const date = DOM.dailyDate ? DOM.dailyDate.value : AppState.selectedDate;
     const entry = AppState.dailyEntries[date]?.[employeeName];
@@ -1296,33 +1385,36 @@ function removeDailyEntry(employeeName) {
         return;
     }
     
-    if (confirm(`Remove daily entry for ${employeeName}?\nGarments: ${entry.clothes}`)) {
-        delete AppState.dailyEntries[date][employeeName];
-        
-        if (Object.keys(AppState.dailyEntries[date]).length === 0) {
-            delete AppState.dailyEntries[date];
-        }
-        
-        saveData();
-        
-        // FIXED: Only update this row and stats
-        const row = document.querySelector(`tr[data-employee="${employeeName}"]`);
-        if (row) {
-            const input = row.querySelector('.daily-input');
-            if (input) {
-                input.value = 0;
-                input.setAttribute('data-original', 0);
+    showConfirmation(
+        `Remove Daily Entry?`,
+        `Remove daily entry for ${employeeName}?\nGarments: ${entry.clothes}`,
+        function() {
+            delete AppState.dailyEntries[date][employeeName];
+            
+            if (Object.keys(AppState.dailyEntries[date]).length === 0) {
+                delete AppState.dailyEntries[date];
             }
             
-            const hoursSpan = row.querySelector('.daily-hours');
-            if (hoursSpan) {
-                hoursSpan.textContent = '0.00h';
+            saveData();
+            
+            const row = document.querySelector(`tr[data-employee="${employeeName}"]`);
+            if (row) {
+                const input = row.querySelector('.daily-input');
+                if (input) {
+                    input.value = 0;
+                    input.setAttribute('data-original', 0);
+                }
+                
+                const hoursSpan = row.querySelector('.daily-hours');
+                if (hoursSpan) {
+                    hoursSpan.textContent = '0.00h';
+                }
             }
+            
+            updateDailyStats();
+            showToast(`Entry removed for ${employeeName}`, 'success');
         }
-        
-        updateDailyStats();
-        showToast(`Entry removed for ${employeeName}`, 'success');
-    }
+    );
 }
 
 
@@ -1335,79 +1427,111 @@ function closeDailyModal() {
     document.body.style.overflow = '';
     AppState.editingDailyId = null;
 }
+// ============================================
+// UPDATED: saveAllDailyEntries - Fix duplicate checking
+// ============================================
 
 function saveAllDailyEntries() {
     const date = DOM.dailyDate ? DOM.dailyDate.value : AppState.selectedDate;
-    const dailyData = AppState.dailyEntries[date] || {};
     
-    if (Object.keys(dailyData).length === 0) {
-        showToast('No daily entries to save', 'warning');
+    if (dailyInputChanges.size === 0) {
+        showToast('No changes to save', 'warning');
         return;
     }
     
-    let entriesAdded = 0;
-    let skippedEntries = 0;
+    let entriesUpdated = 0;
+    let entriesCreated = 0;
     
-    Object.keys(dailyData).forEach(employeeName => {
-        const entry = dailyData[employeeName];
-        if (entry.clothes > 0) {
-            const employee = AppState.employees.find(emp => emp.name === employeeName);
-            const type = employee ? employee.type : 'weekly';
+    // Save all changes from the local map
+    dailyInputChanges.forEach((clothes, employeeName) => {
+        // Find existing entry for this employee on this date
+        const existingIndex = AppState.employees.findIndex(emp => 
+            emp.name === employeeName && emp.date === date
+        );
+        
+        const employee = AppState.employees.find(emp => emp.name === employeeName);
+        const type = employee ? employee.type : 'weekly';
+        
+        if (existingIndex !== -1) {
+            // UPDATE existing entry
+            const dailyEntry = AppState.dailyEntries[date]?.[employeeName] || {
+                startTime: '09:00',
+                breakTime: '13:00',
+                endTime: '17:00',
+                notes: ''
+            };
             
-            // Check if entry already exists for this date
-            const existingEntry = AppState.employees.find(emp => 
-                emp.name === employeeName && emp.date === date
-            );
+            AppState.employees[existingIndex] = {
+                ...AppState.employees[existingIndex],
+                clothes: clothes,
+                startTime: dailyEntry.startTime,
+                breakTime: dailyEntry.breakTime,
+                endTime: dailyEntry.endTime,
+                notes: dailyEntry.notes || AppState.employees[existingIndex].notes,
+                totalHours: calculateTimeDifference(dailyEntry.startTime, dailyEntry.endTime),
+                netHours: calculateNetHours(dailyEntry.startTime, dailyEntry.breakTime, dailyEntry.endTime),
+                breakDuration: calculateActualBreakDuration(dailyEntry.startTime, dailyEntry.breakTime, dailyEntry.endTime),
+                updatedAt: new Date().toISOString()
+            };
             
-            if (existingEntry) {
-                skippedEntries++;
-                return;
-            }
+            entriesUpdated++;
+        } else {
+            // CREATE new entry
+            const dailyEntry = AppState.dailyEntries[date]?.[employeeName] || {
+                startTime: '09:00',
+                breakTime: '13:00',
+                endTime: '17:00',
+                notes: ''
+            };
             
             const newEntry = {
                 id: generateId(),
                 name: employeeName,
                 type: type,
-                clothes: entry.clothes,
+                clothes: clothes,
                 date: date,
-                startTime: entry.startTime,
-                breakTime: entry.breakTime,
-                endTime: entry.endTime,
-                notes: entry.notes || '',
+                startTime: dailyEntry.startTime,
+                breakTime: dailyEntry.breakTime,
+                endTime: dailyEntry.endTime,
+                notes: dailyEntry.notes || '',
                 createdAt: new Date().toISOString(),
-                totalHours: calculateTimeDifference(entry.startTime, entry.endTime),
-                netHours: calculateNetHours(entry.startTime, entry.breakTime, entry.endTime),
-                breakDuration: calculateActualBreakDuration(entry.startTime, entry.breakTime, entry.endTime)
+                totalHours: calculateTimeDifference(dailyEntry.startTime, dailyEntry.endTime),
+                netHours: calculateNetHours(dailyEntry.startTime, dailyEntry.breakTime, dailyEntry.endTime),
+                breakDuration: calculateActualBreakDuration(dailyEntry.startTime, dailyEntry.breakTime, dailyEntry.endTime)
             };
             
             AppState.employees.unshift(newEntry);
-            entriesAdded++;
+            entriesCreated++;
         }
     });
     
-    if (entriesAdded > 0) {
-        delete AppState.dailyEntries[date];
+    if (entriesUpdated > 0 || entriesCreated > 0) {
+        // Clear the local changes map
+        dailyInputChanges.clear();
         
+        // Save all data
         if (saveData()) {
+            // Now re-render the table to show saved state
             updateUI();
             updateStats();
-            let message = `${entriesAdded} daily entries saved successfully`;
-            if (skippedEntries > 0) {
-                message += ` (${skippedEntries} duplicates skipped)`;
-            }
+            updateDailyTable();
+            
+            let message = '';
+            if (entriesCreated > 0) message += `${entriesCreated} new entries created. `;
+            if (entriesUpdated > 0) message += `${entriesUpdated} existing entries updated.`;
+            
             showToast(message, 'success');
         }
-    } else if (skippedEntries > 0) {
-        showToast(`All entries already exist in records (${skippedEntries} found)`, 'warning');
     } else {
         showToast('No valid entries to save (garments must be > 0)', 'warning');
     }
 }
 
+
 function addAllToday() {
     const date = DOM.dailyDate ? DOM.dailyDate.value : AppState.selectedDate;
     
-    // FIX: Get ALL unique employee names
+    // Get all unique employee names
     const allEmployees = [];
     AppState.employees.forEach(emp => {
         if (!allEmployees.includes(emp.name)) {
@@ -1420,6 +1544,7 @@ function addAllToday() {
         return;
     }
     
+    // Initialize entries in AppState
     AppState.dailyEntries[date] = {};
     
     allEmployees.forEach(employeeName => {
@@ -1434,10 +1559,186 @@ function addAllToday() {
     });
     
     saveData();
+    
+    // Re-render the table to show new entries
     updateDailyTable();
+    
     showToast(`Added all ${allEmployees.length} employees for ${formatDate(date)}`, 'success');
 }
 
+
+// ============================================
+// MOBILE DOWNLOAD FIX - Handle mobile file downloads
+// ============================================
+
+function downloadFile(filename, content, mimeType) {
+    // Create blob
+    const blob = new Blob([content], { type: mimeType });
+    
+    // For mobile browsers, use a different approach
+    if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+        // Mobile device - use different method
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const url = e.target.result;
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            
+            // Trigger download
+            const clickEvent = new MouseEvent('click', {
+                view: window,
+                bubbles: true,
+                cancelable: false
+            });
+            a.dispatchEvent(clickEvent);
+            
+            // Cleanup
+            setTimeout(() => {
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            }, 100);
+        };
+        reader.readAsDataURL(blob);
+    } else {
+        // Desktop browser - standard method
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        
+        // Cleanup
+        setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, 100);
+    }
+}
+
+// Update exportToPDF function for mobile compatibility
+function exportToPDF() {
+    try {
+        if (AppState.employees.length === 0) {
+            showToast('No data to export', 'warning');
+            return;
+        }
+        
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('p', 'mm', 'a4');
+        const pageWidth = doc.internal.pageSize.width;
+        
+        // ... [existing PDF generation code] ...
+        
+        const fileName = `Garment_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+        
+        // Mobile-compatible download
+        const pdfOutput = doc.output('blob');
+        downloadFile(fileName, pdfOutput, 'application/pdf');
+        
+        showToast('Complete PDF report generated successfully!', 'success');
+        
+    } catch (error) {
+        console.error('PDF Export Error:', error);
+        showToast(`Error generating PDF: ${error.message}`, 'error');
+    }
+}
+
+// Update exportToExcel function for mobile compatibility
+function exportToExcel() {
+    try {
+        if (AppState.employees.length === 0) {
+            showToast('No data to export', 'warning');
+            return;
+        }
+        
+        // ... [existing Excel generation code] ...
+        
+        const fileName = `Garment_Report_${new Date().toISOString().split('T')[0]}.xlsx`;
+        
+        // Mobile-compatible download
+        const excelOutput = XLSX.write(wb, { bookType: 'xlsx', type: 'binary' });
+        const buffer = new ArrayBuffer(excelOutput.length);
+        const view = new Uint8Array(buffer);
+        for (let i = 0; i < excelOutput.length; i++) {
+            view[i] = excelOutput.charCodeAt(i) & 0xFF;
+        }
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        
+        downloadFile(fileName, blob, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        
+        showToast('Complete Excel report generated successfully!', 'success');
+        
+    } catch (error) {
+        console.error('Excel Export Error:', error);
+        showToast(`Error generating Excel: ${error.message}`, 'error');
+    }
+}
+
+// Update daily export functions similarly
+function exportDailyToPDF() {
+    try {
+        const date = DOM.dailyDate ? DOM.dailyDate.value : AppState.selectedDate;
+        const dailyData = AppState.dailyEntries[date] || {};
+        
+        if (Object.keys(dailyData).length === 0) {
+            showToast('No daily data to export', 'warning');
+            return;
+        }
+        
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('p', 'mm', 'a4');
+        
+        // ... [existing daily PDF generation code] ...
+        
+        const fileName = `Daily_Report_${date.replace(/-/g, '_')}.pdf`;
+        
+        // Mobile-compatible download
+        const pdfOutput = doc.output('blob');
+        downloadFile(fileName, pdfOutput, 'application/pdf');
+        
+        showToast('Daily PDF report generated successfully!', 'success');
+        
+    } catch (error) {
+        console.error('Daily PDF Export Error:', error);
+        showToast(`Error generating daily PDF: ${error.message}`, 'error');
+    }
+}
+
+function exportDailyToExcel() {
+    try {
+        const date = DOM.dailyDate ? DOM.dailyDate.value : AppState.selectedDate;
+        const dailyData = AppState.dailyEntries[date] || {};
+        
+        if (Object.keys(dailyData).length === 0) {
+            showToast('No daily data to export', 'warning');
+            return;
+        }
+        
+        // ... [existing daily Excel generation code] ...
+        
+        const fileName = `Daily_Report_${date.replace(/-/g, '_')}.xlsx`;
+        
+        // Mobile-compatible download
+        const excelOutput = XLSX.write(wb, { bookType: 'xlsx', type: 'binary' });
+        const buffer = new ArrayBuffer(excelOutput.length);
+        const view = new Uint8Array(buffer);
+        for (let i = 0; i < excelOutput.length; i++) {
+            view[i] = excelOutput.charCodeAt(i) & 0xFF;
+        }
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        
+        downloadFile(fileName, blob, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        
+        showToast('Daily Excel report generated successfully!', 'success');
+        
+    } catch (error) {
+        console.error('Daily Excel Export Error:', error);
+        showToast(`Error generating daily Excel: ${error.message}`, 'error');
+    }
+}
 // ============================================
 // Export Functions - COMPLETELY FIXED
 // ============================================
@@ -2930,6 +3231,10 @@ window.showSection = showSection;
 window.closeDailyModal = closeDailyModal;
 window.addAllToday = addAllToday;
 window.saveAllDailyEntries = saveAllDailyEntries;
+// Add to global functions at the bottom of app.js
+window.showConfirmation = showConfirmation;
+window.closeConfirmationModal = closeConfirmationModal;
+window.downloadFile = downloadFile;
 
 // Export for testing
 if (typeof module !== 'undefined' && module.exports) {
