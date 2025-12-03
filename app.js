@@ -625,23 +625,62 @@ function cancelEditMode() {
 
 function initDailyEntry() {
     const today = new Date().toISOString().split('T')[0];
+    
     if (DOM.todayDate) DOM.todayDate.textContent = formatDate(today);
     if (DOM.dailyDate) {
+        // Set the value but don't show it immediately
         DOM.dailyDate.value = today;
         DOM.dailyDate.max = today;
         DOM.dailyDate.addEventListener('change', handleDailyDateChange);
+        DOM.dailyDate.addEventListener('focus', handleDateInputFocus);
+        DOM.dailyDate.addEventListener('blur', handleDateInputBlur);
+        
+        // Initialize placeholder
+        setTimeout(() => {
+            updateDatePlaceholder();
+        }, 100);
     }
     AppState.selectedDate = today;
     
     if (!AppState.dailyEntries[today]) AppState.dailyEntries[today] = {};
     loadDailyEntries();
 }
+function handleDateInputFocus() {
+    if (this.value) {
+        // Hide placeholder when focused with value
+        document.getElementById('datePlaceholder').style.opacity = '0';
+    }
+}
+
+function handleDateInputBlur() {
+    updateDatePlaceholder();
+}
+function updateDatePlaceholder() {
+    const dateInput = document.getElementById('dailyDate');
+    const placeholder = document.getElementById('datePlaceholder');
+    
+    if (dateInput && placeholder) {
+        if (!dateInput.value) {
+            placeholder.style.display = 'block';
+            placeholder.style.opacity = '1';
+        } else {
+            placeholder.style.opacity = '0';
+            setTimeout(() => {
+                placeholder.style.display = 'none';
+            }, 200);
+        }
+    }
+}
+
+
 
 function handleDailyDateChange() {
     AppState.selectedDate = DOM.dailyDate.value;
     dailyInputChanges.clear();
+    updateDatePlaceholder(); // Add this line
     updateDailyTable();
 }
+
 
 function loadDailyEntries() {
     const date = DOM.dailyDate ? DOM.dailyDate.value : AppState.selectedDate;
