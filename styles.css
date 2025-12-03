@@ -3089,11 +3089,33 @@ body.dark-theme .input-group input[type="date"]::-webkit-calendar-picker-indicat
     border-color: var(--primary-color) !important;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
     background: var(--bg-card) !important;
-    transform: scale(1.02);
-    transition: all 0.2s ease;
     z-index: 10;
     position: relative;
 }
+/* Mobile optimizations */
+@media (max-width: 767px) {
+    .daily-input {
+        font-size: 16px !important; /* Prevent iOS zoom */
+        min-height: 44px !important; /* Better touch target */
+        padding: 12px 8px !important;
+        width: 90px !important;
+        text-align: center;
+    }
+    
+    .unsaved-badge {
+        position: absolute;
+        top: 2px;
+        right: 2px;
+        font-size: 12px;
+    }
+    
+    .employee-info {
+        position: relative;
+        min-height: 24px;
+    }
+}
+
+
 
 .daily-input:focus {
     outline: none;
@@ -4986,4 +5008,69 @@ body.dark-theme input:-webkit-autofill:focus {
     .data-table th {
         page-break-inside: avoid;
     }
+}
+.unsaved-badge {
+    color: var(--accent-color);
+    font-weight: bold;
+    margin-left: 4px;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+/* ============================================
+   Confirmation Modal Styles
+   ============================================ */
+
+#confirmationModal .modal-content {
+    max-width: 400px;
+}
+
+.confirmation-content {
+    padding: 20px;
+    text-align: center;
+}
+
+.confirmation-icon {
+    font-size: 48px;
+    color: #ef4444;
+    margin-bottom: 20px;
+}
+
+.confirmation-message {
+    font-size: 16px;
+    color: var(--text-primary);
+    margin-bottom: 10px;
+    line-height: 1.5;
+}
+
+.confirmation-details {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+}
+
+.confirmation-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.confirmation-buttons .btn {
+    min-width: 100px;
+}
+
+.confirmation-buttons .btn-danger {
+    background: #ef4444;
+    color: white;
+}
+
+.confirmation-buttons .btn-secondary {
+    background: #64748b;
+    color: white;
 }
