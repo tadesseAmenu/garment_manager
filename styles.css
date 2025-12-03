@@ -3084,31 +3084,72 @@ body.dark-theme .input-group input[type="date"]::-webkit-calendar-picker-indicat
     background: var(--daily-color);
     color: white;
 }
+/* Add these styles to your CSS file */
 
-/* Daily Entry Specific Styles - FIXED */
-#daily .table-container .table-responsive {
-    max-height: 500px;
+.daily-input.focused {
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+    background-color: var(--bg-card) !important;
+    z-index: 10;
+    position: relative;
 }
 
-.daily-input {
-    width: 80px;
-    padding: var(--space-2);
-    border: 2px solid var(--border-color);
-    border-radius: var(--radius-sm);
-    font-size: var(--text-sm);
-    background: var(--bg-input);
-    color: var(--text-primary);
-    text-align: center;
-    transition: all var(--transition-fast);
-    font-family: inherit;
+/* Mobile-specific input improvements */
+@media (max-width: 767px) {
+    .daily-input {
+        font-size: 16px !important; /* Prevents iOS zoom */
+        min-height: 44px !important; /* Better touch target */
+        padding: var(--space-3) !important;
+        width: 90px !important;
+        border-width: 2px !important;
+        border-radius: var(--radius-md) !important;
+    }
+    
+    .daily-input:focus {
+        transform: scale(1.05);
+        z-index: 20;
+        position: relative;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
+    }
+    
+    /* Prevent tap highlights on inputs */
+    .daily-input {
+        -webkit-tap-highlight-color: transparent;
+        tap-highlight-color: transparent;
+    }
+    
+    /* Better touch handling for table cells */
+    .data-table td {
+        padding: var(--space-3) var(--space-2) !important;
+    }
 }
 
-.daily-input:focus {
-    outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
-    transform: scale(1.05);
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+    .daily-input {
+        touch-action: manipulation;
+    }
+    
+    /* Prevent double-tap zoom on inputs */
+    .daily-input {
+        touch-action: manipulation;
+    }
+    
+    /* Better feedback for touch */
+    .daily-input:active {
+        background-color: var(--bg-secondary) !important;
+    }
 }
+
+/* Prevent input zoom on iOS */
+@media screen and (max-width: 767px) {
+    input,
+    select,
+    textarea {
+        font-size: 16px !important;
+    }
+}
+
 
 .time-cell {
     display: flex;
