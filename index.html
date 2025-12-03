@@ -1,16 +1,17 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-    <title>Garment Worker Management System</title>
+    <title>Garment Worker Management System v3.2.1</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <!-- Mobile Header -->
     <header class="mobile-header">
-        <button class="menu-toggle" id="menuToggle">
+        <button class="menu-toggle" id="menuToggle" aria-label="Open menu" aria-expanded="false">
             <i class="fas fa-bars"></i>
         </button>
         <div class="mobile-logo">
@@ -21,27 +22,27 @@
             <div class="mobile-stats">
                 <span id="mobileTotal">0</span>
             </div>
-            <button class="theme-toggle" id="mobileThemeToggle" title="Toggle Dark/Light Mode">
+            <button class="theme-toggle" id="mobileThemeToggle" title="Toggle Dark/Light Mode" aria-label="Toggle theme">
                 <i class="fas fa-moon"></i>
             </button>
         </div>
     </header>
 
     <!-- Mobile Navigation -->
-    <nav class="mobile-nav" id="mobileNav">
+    <nav class="mobile-nav" id="mobileNav" aria-hidden="true">
         <div class="nav-header">
             <h3>Garment Pro</h3>
             <div>
-                <button class="theme-toggle nav-theme-toggle" id="navThemeToggle" title="Toggle Theme">
+                <button class="theme-toggle nav-theme-toggle" id="navThemeToggle" title="Toggle Theme" aria-label="Toggle theme">
                     <i class="fas fa-moon"></i>
                 </button>
-                <button class="close-nav" id="closeNav">
+                <button class="close-nav" id="closeNav" aria-label="Close menu">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
         </div>
         <div class="nav-items">
-            <a href="#form" class="nav-item active" data-section="form">
+            <a href="#form" class="nav-item active" data-section="form" aria-current="page">
                 <i class="fas fa-user-plus"></i>
                 <span>New Employee</span>
             </a>
@@ -89,14 +90,43 @@
                     <i class="fas fa-tshirt"></i>
                     <div>
                         <h1>Garment Worker Management</h1>
-                        <p class="subtitle">Production Tracking System</p>
+                        <p class="subtitle">Production Tracking System v3.2.1</p>
                     </div>
                 </div>
-                <button class="theme-toggle desktop-theme-toggle" id="desktopThemeToggle" title="Toggle Dark/Light Mode">
+                <button class="theme-toggle desktop-theme-toggle" id="desktopThemeToggle" title="Toggle Dark/Light Mode" aria-label="Toggle theme">
                     <i class="fas fa-moon"></i>
                     <span class="theme-label">Dark Mode</span>
                 </button>
             </div>
+            
+            <!-- Desktop Navigation -->
+            <nav class="desktop-nav" aria-label="Main navigation">
+                <a href="#form" class="desktop-nav-link active" data-section="form" aria-current="page">
+                    <i class="fas fa-user-plus"></i>
+                    <span>New Entry</span>
+                </a>
+                <a href="#daily" class="desktop-nav-link" data-section="daily">
+                    <i class="fas fa-calendar-day"></i>
+                    <span>Daily</span>
+                </a>
+                <a href="#weekly" class="desktop-nav-link" data-section="weekly">
+                    <i class="fas fa-calendar-week"></i>
+                    <span>Weekly</span>
+                </a>
+                <a href="#monthly" class="desktop-nav-link" data-section="monthly">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span>Monthly</span>
+                </a>
+                <a href="#export" class="desktop-nav-link" data-section="export">
+                    <i class="fas fa-download"></i>
+                    <span>Export</span>
+                </a>
+                <a href="#settings" class="desktop-nav-link" data-section="settings">
+                    <i class="fas fa-cog"></i>
+                    <span>Settings</span>
+                </a>
+            </nav>
+            
             <div class="quick-stats">
                 <div class="stat">
                     <i class="fas fa-users"></i>
@@ -119,26 +149,33 @@
                         <span class="stat-label">Hours</span>
                     </div>
                 </div>
+                <div class="stat">
+                    <i class="fas fa-chart-line"></i>
+                    <div>
+                        <span class="stat-value" id="desktopEfficiency">0</span>
+                        <span class="stat-label">Eff/Hour</span>
+                    </div>
+                </div>
             </div>
         </header>
 
         <!-- Main Content -->
         <main class="main-content">
             <!-- New Employee Form -->
-            <section id="form" class="content-section active">
+<section id="form" class="content-section active" aria-labelledby="form-title">
                 <div class="section-header">
-                    <h2><i class="fas fa-user-plus"></i> New Employee Entry</h2>
+                    <h2 id="form-title"><i class="fas fa-user-plus"></i> New Employee Entry</h2>
                     <div class="section-actions">
-                        <button class="btn btn-sm btn-outline" id="clearForm">
+                        <button class="btn btn-sm btn-outline" id="clearForm" aria-label="Clear form">
                             <i class="fas fa-redo"></i> Clear
                         </button>
-                        <button class="btn btn-sm btn-outline" id="cancelEdit" style="display: none;">
-                            <i class="fas fa-times"></i> Cancel
+                        <button class="btn btn-sm btn-outline" id="cancelEdit" style="display: none;" aria-label="Cancel editing">
+                            <i class="fas fa-times"></i> Cancel Edit
                         </button>
                     </div>
                 </div>
 
-                <form id="employeeForm">
+                <form id="employeeForm" aria-label="Employee entry form">
                     <input type="hidden" id="editId" value="">
                     
                     <div class="form-card">
@@ -152,29 +189,32 @@
                                     <i class="fas fa-user"></i> Employee Name *
                                 </label>
                                 <input type="text" id="employeeName" required 
-                                       placeholder="Enter full name">
+                                       placeholder="Enter full name"
+                                       aria-required="true"
+                                       autocomplete="name">
                             </div>
 
                             <div class="input-group">
                                 <label for="employeeType">
                                     <i class="fas fa-user-tag"></i> Employee Type *
                                 </label>
-                                <div class="radio-group">
+                                <div class="radio-group" role="radiogroup" aria-labelledby="employeeType">
                                     <label class="radio-option">
-                                        <input type="radio" name="employeeType" value="weekly" required>
+                                        <input type="radio" name="employeeType" value="weekly" required aria-label="Weekly employee">
                                         <span class="radio-custom">
                                             <i class="fas fa-calendar-week"></i>
                                             Weekly
                                         </span>
                                     </label>
                                     <label class="radio-option">
-                                        <input type="radio" name="employeeType" value="monthly" required>
+                                        <input type="radio" name="employeeType" value="monthly" required aria-label="Monthly employee">
                                         <span class="radio-custom">
                                             <i class="fas fa-calendar-alt"></i>
                                             Monthly
                                         </span>
                                     </label>
                                 </div>
+                                <span class="input-hint">Select payment schedule</span>
                             </div>
                         </div>
 
@@ -184,14 +224,17 @@
                                     <i class="fas fa-tshirt"></i> Garments Produced *
                                 </label>
                                 <input type="number" id="dailyClothes" min="0" required 
-                                       placeholder="Number of garments">
+                                       placeholder="Number of garments"
+                                       aria-required="true"
+                                       aria-describedby="clothesHint">
+                                <span id="clothesHint" class="input-hint">Enter total garments produced</span>
                             </div>
 
                             <div class="input-group">
                                 <label for="workDate">
                                     <i class="fas fa-calendar"></i> Work Date *
                                 </label>
-                                <input type="date" id="workDate" required>
+                                <input type="date" id="workDate" required aria-required="true">
                             </div>
                         </div>
                     </div>
@@ -204,21 +247,21 @@
                         <div class="time-inputs">
                             <div class="time-input-group">
                                 <label for="startTime">Start Time *</label>
-                                <input type="time" id="startTime" required>
+                                <input type="time" id="startTime" required aria-required="true">
                             </div>
 
                             <div class="time-input-group">
                                 <label for="breakTime">Lunch Break *</label>
-                                <input type="time" id="breakTime" required>
+                                <input type="time" id="breakTime" required aria-required="true">
                             </div>
 
                             <div class="time-input-group">
                                 <label for="endTime">End Time *</label>
-                                <input type="time" id="endTime" required>
+                                <input type="time" id="endTime" required aria-required="true">
                             </div>
                         </div>
 
-                        <div class="time-summary">
+                        <div class="time-summary" aria-live="polite" aria-atomic="true">
                             <div class="summary-item">
                                 <span>Total Hours</span>
                                 <strong id="totalHours">0.00</strong>
@@ -244,7 +287,8 @@
                                 <i class="fas fa-comment-alt"></i> Notes (Optional)
                             </label>
                             <textarea id="notes" rows="3" 
-                                      placeholder="Add any notes or comments..."></textarea>
+                                      placeholder="Add any notes or comments..."
+                                      aria-label="Additional notes"></textarea>
                         </div>
                     </div>
 
@@ -252,7 +296,7 @@
                         <button type="submit" id="submitForm" class="btn btn-primary btn-block">
                             <i class="fas fa-save"></i> Save Employee Entry
                         </button>
-                        <button type="button" id="updateForm" class="btn btn-success btn-block" style="display: none;">
+                        <button type="button" id="updateForm" class="btn btn-success btn-block" style="display: none;" aria-label="Update entry">
                             <i class="fas fa-sync-alt"></i> Update Entry
                         </button>
                     </div>
@@ -260,33 +304,35 @@
             </section>
 
             <!-- Daily Entry Section -->
-            <section id="daily" class="content-section">
+            <section id="daily" class="content-section" aria-labelledby="daily-title" hidden>
                 <div class="section-header">
-                    <h2><i class="fas fa-calendar-day"></i> Daily Production Entry</h2>
+                    <h2 id="daily-title"><i class="fas fa-calendar-day"></i> Daily Production Entry</h2>
                     <div class="section-actions">
-    <div class="dropdown">
-        <button class="btn btn-sm btn-outline" onclick="toggleDailyExportMenu()">
-            <i class="fas fa-download"></i> Export
-        </button>
-        <div class="dropdown-menu" id="dailyExportMenu">
-            <button class="dropdown-item" onclick="exportDailyToPDF()">
-                <i class="fas fa-file-pdf"></i> PDF Format
-            </button>
-            <button class="dropdown-item" onclick="exportDailyToExcel()">
-                <i class="fas fa-file-excel"></i> Excel Format
-            </button>
-        </div>
-    </div>
-    <button class="btn btn-sm btn-primary" id="addAllToday">
-        <i class="fas fa-plus-circle"></i> Add All
-    </button>
-</div>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline" id="dailyExportButton" aria-haspopup="true" aria-expanded="false">
+                                <i class="fas fa-download"></i> Export
+                            </button>
+                            <div class="dropdown-menu" id="dailyExportMenu" role="menu" aria-labelledby="dailyExportButton">
+                                <button class="dropdown-item" onclick="exportDailyToPDF()" role="menuitem">
+                                    <i class="fas fa-file-pdf"></i> PDF Format
+                                </button>
+                                <button class="dropdown-item" onclick="exportDailyToExcel()" role="menuitem">
+                                    <i class="fas fa-file-excel"></i> Excel Format
+                                </button>
+                            </div>
+                        </div>
+                        <button class="btn btn-sm btn-primary" id="addAllToday" aria-label="Add all employees for today">
+                            <i class="fas fa-plus-circle"></i> Add All
+                        </button>
+                    </div>
                 </div>
 
                 <div class="form-card">
                     <h3 class="form-card-title">
                         <i class="fas fa-calendar-check"></i> Selected Date: 
-                        <input type="date" id="dailyDate" style="margin-left: 10px; padding: 4px 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+                        <input type="date" id="dailyDate" 
+                               aria-label="Select date for daily entries"
+                               style="margin-left: 10px; padding: 4px 8px; border: 1px solid var(--border-color); border-radius: 4px;">
                     </h3>
                     <p style="color: var(--text-secondary); font-size: var(--text-sm); margin-top: 8px;">
                         Today: <span id="todayDate"></span> • Total Employees: <span id="totalEmployees">0</span>
@@ -326,15 +372,15 @@
 
                 <div class="table-container" id="dailyTableContainer">
                     <div class="table-responsive">
-                        <table class="data-table" id="dailyTable">
+                        <table class="data-table" id="dailyTable" aria-label="Daily production entries">
                             <thead>
                                 <tr>
-                                    <th>Employee</th>
-                                    <th>Type</th>
-                                    <th>Garments</th>
-                                    <th>Time</th>
-                                    <th>Hours</th>
-                                    <th>Actions</th>
+                                    <th scope="col">Employee</th>
+                                    <th scope="col">Type</th>
+                                    <th scope="col">Garments</th>
+                                    <th scope="col">Time</th>
+                                    <th scope="col">Hours</th>
+                                    <th scope="col">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="dailyTableBody">
@@ -354,7 +400,7 @@
                 </div>
 
                 <div class="form-actions">
-                    <button type="button" id="saveDailyEntries" class="btn btn-success btn-block">
+                    <button type="button" id="saveDailyEntries" class="btn btn-success btn-block" aria-label="Save all daily entries">
                         <i class="fas fa-save"></i> Save All Daily Entries to Records
                     </button>
                     <p style="text-align: center; color: var(--text-secondary); font-size: var(--text-sm); margin-top: 8px;">
@@ -364,13 +410,23 @@
             </section>
 
             <!-- Weekly Employees Section -->
-            <section id="weekly" class="content-section">
+            <section id="weekly" class="content-section" aria-labelledby="weekly-title" hidden>
                 <div class="section-header">
-                    <h2><i class="fas fa-calendar-week"></i> Weekly Employees</h2>
+                    <h2 id="weekly-title"><i class="fas fa-calendar-week"></i> Weekly Employees</h2>
                     <div class="section-actions">
-                        <button class="btn btn-sm btn-outline" onclick="exportToPDF()">
-                            <i class="fas fa-download"></i> Export
-                        </button>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline" aria-haspopup="true" aria-expanded="false">
+                                <i class="fas fa-download"></i> Export
+                            </button>
+                            <div class="dropdown-menu" role="menu">
+                                <button class="dropdown-item" onclick="exportToPDF()" role="menuitem">
+                                    <i class="fas fa-file-pdf"></i> PDF Format
+                                </button>
+                                <button class="dropdown-item" onclick="exportToExcel()" role="menuitem">
+                                    <i class="fas fa-file-excel"></i> Excel Format
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -407,14 +463,14 @@
 
                 <div class="table-container">
                     <div class="table-responsive">
-                        <table class="data-table" id="weeklyTable">
+                        <table class="data-table" id="weeklyTable" aria-label="Weekly employees">
                             <thead>
                                 <tr>
-                                    <th data-sort="name">Name</th>
-                                    <th data-sort="date">Date</th>
-                                    <th data-sort="clothes">Garments</th>
-                                    <th data-sort="hours">Hours</th>
-                                    <th>Actions</th>
+                                    <th scope="col" data-sort="name" role="columnheader" aria-sort="none">Name</th>
+                                    <th scope="col" data-sort="date" role="columnheader" aria-sort="none">Date</th>
+                                    <th scope="col" data-sort="clothes" role="columnheader" aria-sort="none">Garments</th>
+                                    <th scope="col" data-sort="hours" role="columnheader" aria-sort="none">Hours</th>
+                                    <th scope="col">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="weeklyTableBody">
@@ -435,11 +491,11 @@
                         Showing <span id="weeklyShowing">0</span> of <span id="weeklyTotal">0</span> entries
                     </div>
                     <div class="table-actions">
-                        <button class="btn btn-sm" id="prevWeekly" disabled>
+                        <button class="btn btn-sm" id="prevWeekly" disabled aria-label="Previous page">
                             <i class="fas fa-chevron-left"></i>
                         </button>
-                        <span class="page-info">Page 1</span>
-                        <button class="btn btn-sm" id="nextWeekly" disabled>
+                        <span class="page-info" id="weeklyPageInfo">Page 1 of 1</span>
+                        <button class="btn btn-sm" id="nextWeekly" disabled aria-label="Next page">
                             <i class="fas fa-chevron-right"></i>
                         </button>
                     </div>
@@ -447,13 +503,23 @@
             </section>
 
             <!-- Monthly Employees Section -->
-            <section id="monthly" class="content-section">
+            <section id="monthly" class="content-section" aria-labelledby="monthly-title" hidden>
                 <div class="section-header">
-                    <h2><i class="fas fa-calendar-alt"></i> Monthly Employees</h2>
+                    <h2 id="monthly-title"><i class="fas fa-calendar-alt"></i> Monthly Employees</h2>
                     <div class="section-actions">
-                        <button class="btn btn-sm btn-outline" onclick="exportToPDF()">
-                            <i class="fas fa-download"></i> Export
-                        </button>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline" aria-haspopup="true" aria-expanded="false">
+                                <i class="fas fa-download"></i> Export
+                            </button>
+                            <div class="dropdown-menu" role="menu">
+                                <button class="dropdown-item" onclick="exportToPDF()" role="menuitem">
+                                    <i class="fas fa-file-pdf"></i> PDF Format
+                                </button>
+                                <button class="dropdown-item" onclick="exportToExcel()" role="menuitem">
+                                    <i class="fas fa-file-excel"></i> Excel Format
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -490,14 +556,14 @@
 
                 <div class="table-container">
                     <div class="table-responsive">
-                        <table class="data-table" id="monthlyTable">
+                        <table class="data-table" id="monthlyTable" aria-label="Monthly employees">
                             <thead>
                                 <tr>
-                                    <th data-sort="name">Name</th>
-                                    <th data-sort="date">Date</th>
-                                    <th data-sort="clothes">Garments</th>
-                                    <th data-sort="hours">Hours</th>
-                                    <th>Actions</th>
+                                    <th scope="col" data-sort="name" role="columnheader" aria-sort="none">Name</th>
+                                    <th scope="col" data-sort="date" role="columnheader" aria-sort="none">Date</th>
+                                    <th scope="col" data-sort="clothes" role="columnheader" aria-sort="none">Garments</th>
+                                    <th scope="col" data-sort="hours" role="columnheader" aria-sort="none">Hours</th>
+                                    <th scope="col">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="monthlyTableBody">
@@ -518,11 +584,11 @@
                         Showing <span id="monthlyShowing">0</span> of <span id="monthlyTotal">0</span> entries
                     </div>
                     <div class="table-actions">
-                        <button class="btn btn-sm" id="prevMonthly" disabled>
+                        <button class="btn btn-sm" id="prevMonthly" disabled aria-label="Previous page">
                             <i class="fas fa-chevron-left"></i>
                         </button>
-                        <span class="page-info">Page 1</span>
-                        <button class="btn btn-sm" id="nextMonthly" disabled>
+                        <span class="page-info" id="monthlyPageInfo">Page 1 of 1</span>
+                        <button class="btn btn-sm" id="nextMonthly" disabled aria-label="Next page">
                             <i class="fas fa-chevron-right"></i>
                         </button>
                     </div>
@@ -530,9 +596,9 @@
             </section>
 
             <!-- Export Section -->
-            <section id="export" class="content-section">
+            <section id="export" class="content-section" aria-labelledby="export-title" hidden>
                 <div class="section-header">
-                    <h2><i class="fas fa-download"></i> Export Data</h2>
+                    <h2 id="export-title"><i class="fas fa-download"></i> Export Data</h2>
                 </div>
 
                 <div class="export-options">
@@ -542,9 +608,9 @@
                         </div>
                         <div class="export-info">
                             <h3>Complete Report (PDF)</h3>
-                            <p>Generate professional PDF report with all employee data</p>
+                            <p>Generate professional PDF report with all employee data, summary statistics, and formatted tables.</p>
                         </div>
-                        <button class="btn btn-primary" onclick="exportToPDF()">
+                        <button class="btn btn-primary" onclick="exportToPDF()" aria-label="Generate PDF report">
                             <i class="fas fa-download"></i> Generate PDF
                         </button>
                     </div>
@@ -555,9 +621,9 @@
                         </div>
                         <div class="export-info">
                             <h3>Excel Spreadsheet</h3>
-                            <p>Export data to Excel with formatted tables</p>
+                            <p>Export data to Excel with formatted tables, summary sheets, and calculations.</p>
                         </div>
-                        <button class="btn btn-success" onclick="exportToExcel()">
+                        <button class="btn btn-success" onclick="exportToExcel()" aria-label="Generate Excel report">
                             <i class="fas fa-download"></i> Generate Excel
                         </button>
                     </div>
@@ -568,9 +634,9 @@
                         </div>
                         <div class="export-info">
                             <h3>Backup Data</h3>
-                            <p>Save all data as JSON file for backup</p>
+                            <p>Save all data as JSON file for backup and transfer between devices.</p>
                         </div>
-                        <button class="btn btn-secondary" onclick="exportBackup()">
+                        <button class="btn btn-secondary" onclick="exportBackup()" aria-label="Backup all data">
                             <i class="fas fa-save"></i> Backup Now
                         </button>
                     </div>
@@ -648,22 +714,22 @@
             </section>
 
             <!-- Settings Section -->
-            <section id="settings" class="content-section">
+            <section id="settings" class="content-section" aria-labelledby="settings-title" hidden>
                 <div class="section-header">
-                    <h2><i class="fas fa-cog"></i> Settings</h2>
+                    <h2 id="settings-title"><i class="fas fa-cog"></i> Settings</h2>
                 </div>
 
                 <div class="settings-options">
                     <div class="settings-card">
                         <h3><i class="fas fa-broom"></i> Data Management</h3>
                         <div class="settings-group">
-                            <button class="btn btn-danger btn-block" onclick="clearAllData()">
+                            <button class="btn btn-danger btn-block" onclick="clearAllData()" aria-label="Clear all data">
                                 <i class="fas fa-trash"></i> Clear All Data
                             </button>
-                            <p class="settings-hint">This will permanently delete all employee records.</p>
+                            <p class="settings-hint">This will permanently delete all employee records and daily entries.</p>
                         </div>
                         <div class="settings-group">
-                            <button class="btn btn-warning btn-block" onclick="clearDailyEntries()">
+                            <button class="btn btn-warning btn-block" onclick="clearDailyEntries()" aria-label="Clear today's entries">
                                 <i class="fas fa-calendar-times"></i> Clear Today's Entries
                             </button>
                             <p class="settings-hint">Clear only today's daily entries (keeps permanent records).</p>
@@ -673,17 +739,17 @@
                     <div class="settings-card">
                         <h3><i class="fas fa-sync-alt"></i> Import Data</h3>
                         <div class="settings-group">
-                            <label class="file-input">
+                            <label for="importFile" class="file-input" aria-label="Choose backup file to import">
                                 <input type="file" id="importFile" accept=".json" hidden>
                                 <i class="fas fa-upload"></i>
-                                <span>Choose Backup File</span>
+                                <span>Choose Backup File (.json)</span>
                             </label>
-                            <p class="settings-hint">Import data from a previously saved backup file.</p>
+                            <p class="settings-hint">Import data from a previously saved backup file. Max file size: 5MB</p>
                         </div>
                     </div>
 
                     <div class="settings-card">
-                        <h3><i class="fas fa-info-circle"></i> System Info</h3>
+                        <h3><i class="fas fa-info-circle"></i> System Information</h3>
                         <div class="info-grid">
                             <div class="info-item">
                                 <span>Total Entries:</span>
@@ -695,11 +761,19 @@
                             </div>
                             <div class="info-item">
                                 <span>App Version:</span>
-                                <strong>3.1.0</strong>
+                                <strong>3.2.1</strong>
                             </div>
                             <div class="info-item">
                                 <span>Last Backup:</span>
                                 <strong id="settingsBackup">Never</strong>
+                            </div>
+                            <div class="info-item">
+                                <span>Total Weekly:</span>
+                                <strong id="settingsWeekly">0</strong>
+                            </div>
+                            <div class="info-item">
+                                <span>Total Monthly:</span>
+                                <strong id="settingsMonthly">0</strong>
                             </div>
                         </div>
                     </div>
@@ -708,8 +782,8 @@
         </main>
 
         <!-- Mobile Bottom Navigation -->
-        <nav class="bottom-nav">
-            <a href="#form" class="nav-link active" data-section="form">
+        <nav class="bottom-nav" aria-label="Mobile navigation">
+            <a href="#form" class="nav-link active" data-section="form" aria-current="page">
                 <i class="fas fa-user-plus"></i>
                 <span>New</span>
             </a>
@@ -766,20 +840,20 @@
                 </div>
             </div>
             <div class="footer-copyright">
-                <p>&copy; <span id="currentYear"></span> Garment Pro Management System v3.1</p>
-                <p class="version">Professional Production Tracking | Enhanced Reporting</p>
+                <p>&copy; <span id="currentYear"></span> Garment Pro Management System v3.2.1</p>
+                <p class="version">Professional Production Tracking | Enhanced Reporting | Fixed & Improved</p>
             </div>
         </footer>
     </div>
 
     <!-- Toast Container -->
-    <div id="toastContainer"></div>
+    <div id="toastContainer" role="alert" aria-live="polite" aria-atomic="true"></div>
 
-    <!-- Export Menu (Mobile) -->
-    <div class="export-menu" id="exportMenu">
+    <!-- Export Menu (Mobile) - Now handled by dropdown -->
+    <div class="export-menu" id="exportMenu" aria-hidden="true" style="display: none;">
         <div class="export-menu-header">
             <h3>Export Options</h3>
-            <button class="close-export-menu" onclick="hideExportMenu()">
+            <button class="close-export-menu" onclick="hideExportMenu()" aria-label="Close export menu">
                 <i class="fas fa-times"></i>
             </button>
         </div>
