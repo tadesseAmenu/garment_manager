@@ -45,3 +45,95 @@
         left: 12px;
     }
 }
+/* Mobile-friendly table inputs */
+.mobile-input-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 120px;
+}
+
+.daily-input.mobile-number-input {
+    flex: 1;
+    min-width: 60px;
+    max-width: 80px;
+    height: 40px;
+    padding: 8px;
+    border: 2px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 16px; /* Prevents iOS zoom */
+    text-align: center;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background: var(--card-bg);
+}
+
+/* Remove spinner buttons on mobile */
+.daily-input.mobile-number-input::-webkit-inner-spin-button,
+.daily-input.mobile-number-input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.daily-input.mobile-number-input[type="number"] {
+    -moz-appearance: textfield;
+}
+
+.input-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.input-btn {
+    width: 32px;
+    height: 32px;
+    border: 2px solid var(--border-color);
+    background: var(--card-bg);
+    color: var(--text-primary);
+    border-radius: 4px;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    touch-action: manipulation;
+}
+
+.input-btn:active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+/* Mobile-specific styles */
+@media (max-width: 768px) {
+    .mobile-input-container {
+        min-width: 140px;
+    }
+    
+    .daily-input.mobile-number-input {
+        font-size: 18px;
+        height: 44px; /* Minimum touch target size */
+    }
+    
+    .input-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 20px;
+    }
+    
+    /* Prevent table from interfering with touch */
+    #dailyTableBody tr {
+        touch-action: manipulation;
+    }
+    
+    /* Ensure inputs are easily tappable */
+    .daily-input.mobile-number-input,
+    .input-btn {
+        min-height: 44px;
+    }
+}
