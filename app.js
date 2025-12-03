@@ -1,6 +1,6 @@
 // ============================================
 // Garment Worker Management System
-// Version 3.2.3 - COMPLETELY FIXED VERSION
+// Version 3.2.4 - OPTIMIZED & FIXED
 // ============================================
 
 // Application State
@@ -8,145 +8,159 @@ const AppState = {
     employees: [],
     nextId: 1,
     currentSection: 'form',
-    currentPage: {
-        weekly: 1,
-        monthly: 1
-    },
+    currentPage: { weekly: 1, monthly: 1 },
     itemsPerPage: 10,
-    sortConfig: {
-        weekly: { key: 'date', direction: 'desc' },
-        monthly: { key: 'date', direction: 'desc' }
-    },
+    sortConfig: { weekly: { key: 'date', direction: 'desc' }, monthly: { key: 'date', direction: 'desc' } },
     isDarkMode: false,
     editingId: null,
     dailyEntries: {},
     selectedDate: null,
     editingDailyId: null,
-    lastSaveTime: null,
-    currentSortColumn: {
-        weekly: null,
-        monthly: null
-    }
+    lastSaveTime: null
 };
 
-// DOM Elements Cache (will be initialized in initDOM())
 let DOM = {};
+let dailyInputChanges = new Map();
+let lastFocusedElement = null;
+let confirmationCallback = null;
+let confirmationElement = null;
 
 // ============================================
-// DOM Initialization - FIXED
+// Core Initialization
+// ============================================
+
+function init() {
+    console.log('Initializing Garment Management System v3.2.4');
+    initDOM();
+    initTheme();
+    setupNavigation();
+    setupEventListeners();
+    loadData();
+    updateForm();
+    initDailyEntry();
+    createSaveIndicator();
+    createModals();
+    
+    const hash = window.location.hash.substring(1);
+    if (hash && ['form', 'daily', 'weekly', 'monthly', 'export', 'settings'].includes(hash)) {
+        setTimeout(() => showSection(hash), 100);
+    } else {
+        showSection('form');
+    }
+    
+    setTimeout(() => {
+        showToast('Garment Management System v3.2.4 loaded', 'success', 3000);
+    }, 1000);
+}
+
+// ============================================
+// DOM Initialization
 // ============================================
 
 function initDOM() {
+    const get = id => document.getElementById(id);
     DOM = {
-        // Theme elements
-        mobileThemeToggle: document.getElementById('mobileThemeToggle'),
-        navThemeToggle: document.getElementById('navThemeToggle'),
-        desktopThemeToggle: document.getElementById('desktopThemeToggle'),
+        // Theme
+        mobileThemeToggle: get('mobileThemeToggle'),
+        navThemeToggle: get('navThemeToggle'),
+        desktopThemeToggle: get('desktopThemeToggle'),
         
-        // Mobile elements
-        menuToggle: document.getElementById('menuToggle'),
-        mobileNav: document.getElementById('mobileNav'),
-        closeNav: document.getElementById('closeNav'),
-        navWeekly: document.getElementById('navWeekly'),
-        navMonthly: document.getElementById('navMonthly'),
-        navDaily: document.getElementById('navDaily'),
-        mobileTotal: document.getElementById('mobileTotal'),
+        // Mobile
+        menuToggle: get('menuToggle'),
+        mobileNav: get('mobileNav'),
+        closeNav: get('closeNav'),
+        mobileTotal: get('mobileTotal'),
         
-        // Form elements
-        employeeForm: document.getElementById('employeeForm'),
-        clearForm: document.getElementById('clearForm'),
-        cancelEdit: document.getElementById('cancelEdit'),
-        employeeName: document.getElementById('employeeName'),
+        // Form
+        employeeForm: get('employeeForm'),
+        clearForm: get('clearForm'),
+        cancelEdit: get('cancelEdit'),
+        employeeName: get('employeeName'),
         employeeType: document.querySelectorAll('input[name="employeeType"]'),
-        dailyClothes: document.getElementById('dailyClothes'),
-        workDate: document.getElementById('workDate'),
-        startTime: document.getElementById('startTime'),
-        breakTime: document.getElementById('breakTime'),
-        endTime: document.getElementById('endTime'),
-        notes: document.getElementById('notes'),
-        submitForm: document.getElementById('submitForm'),
-        updateForm: document.getElementById('updateForm'),
-        editId: document.getElementById('editId'),
+        dailyClothes: get('dailyClothes'),
+        workDate: get('workDate'),
+        startTime: get('startTime'),
+        breakTime: get('breakTime'),
+        endTime: get('endTime'),
+        notes: get('notes'),
+        submitForm: get('submitForm'),
+        updateForm: get('updateForm'),
+        editId: get('editId'),
         
-        // Daily entry elements
-        dailyDate: document.getElementById('dailyDate'),
-        todayDate: document.getElementById('todayDate'),
-        totalEmployees: document.getElementById('totalEmployees'),
-        dailyActive: document.getElementById('dailyActive'),
-        dailyGarments: document.getElementById('dailyGarments'),
-        dailyHours: document.getElementById('dailyHours'),
-        dailyAvg: document.getElementById('dailyAvg'),
-        addAllToday: document.getElementById('addAllToday'),
-        saveDailyEntries: document.getElementById('saveDailyEntries'),
-        dailyTableBody: document.getElementById('dailyTableBody'),
-        dailyEmpty: document.getElementById('dailyEmpty'),
-        dailyExportButton: document.getElementById('dailyExportButton'),
+        // Daily
+        dailyDate: get('dailyDate'),
+        todayDate: get('todayDate'),
+        totalEmployees: get('totalEmployees'),
+        dailyActive: get('dailyActive'),
+        dailyGarments: get('dailyGarments'),
+        dailyHours: get('dailyHours'),
+        dailyAvg: get('dailyAvg'),
+        addAllToday: get('addAllToday'),
+        saveDailyEntries: get('saveDailyEntries'),
+        dailyTableBody: get('dailyTableBody'),
+        dailyEmpty: get('dailyEmpty'),
+        dailyExportButton: get('dailyExportButton'),
+        dailyExportMenu: get('dailyExportMenu'),
         
-        // Table elements
-        weeklyTableBody: document.getElementById('weeklyTableBody'),
-        monthlyTableBody: document.getElementById('monthlyTableBody'),
-        weeklyEmpty: document.getElementById('weeklyEmpty'),
-        monthlyEmpty: document.getElementById('monthlyEmpty'),
+        // Tables
+        weeklyTableBody: get('weeklyTableBody'),
+        monthlyTableBody: get('monthlyTableBody'),
+        weeklyEmpty: get('weeklyEmpty'),
+        monthlyEmpty: get('monthlyEmpty'),
         
-        // Stats elements
-        weeklyCount: document.getElementById('weeklyCount'),
-        weeklyGarments: document.getElementById('weeklyGarments'),
-        weeklyHours: document.getElementById('weeklyHours'),
-        weeklyAvg: document.getElementById('weeklyAvg'),
-        monthlyCount: document.getElementById('monthlyCount'),
-        monthlyGarments: document.getElementById('monthlyGarments'),
-        monthlyHours: document.getElementById('monthlyHours'),
-        monthlyAvg: document.getElementById('monthlyAvg'),
-        desktopTotal: document.getElementById('desktopTotal'),
-        desktopGarments: document.getElementById('desktopGarments'),
-        desktopHours: document.getElementById('desktopHours'),
-        desktopEfficiency: document.getElementById('desktopEfficiency'), // ADDED
-        footerTotal: document.getElementById('footerTotal'),
-        footerGarments: document.getElementById('footerGarments'),
-        footerEfficiency: document.getElementById('footerEfficiency'),
+        // Stats
+        weeklyCount: get('weeklyCount'),
+        weeklyGarments: get('weeklyGarments'),
+        weeklyHours: get('weeklyHours'),
+        weeklyAvg: get('weeklyAvg'),
+        monthlyCount: get('monthlyCount'),
+        monthlyGarments: get('monthlyGarments'),
+        monthlyHours: get('monthlyHours'),
+        monthlyAvg: get('monthlyAvg'),
+        desktopTotal: get('desktopTotal'),
+        desktopGarments: get('desktopGarments'),
+        desktopHours: get('desktopHours'),
+        desktopEfficiency: get('desktopEfficiency'),
+        footerTotal: get('footerTotal'),
+        footerGarments: get('footerGarments'),
+        footerEfficiency: get('footerEfficiency'),
         
-        // Preview elements
-        previewWeekly: document.getElementById('previewWeekly'),
-        previewWeeklyGarments: document.getElementById('previewWeeklyGarments'),
-        previewMonthly: document.getElementById('previewMonthly'),
-        previewMonthlyGarments: document.getElementById('previewMonthlyGarments'),
-        previewToday: document.getElementById('previewToday'),
-        previewTodayGarments: document.getElementById('previewTodayGarments'),
-        previewTotal: document.getElementById('previewTotal'),
-        previewHours: document.getElementById('previewHours'),
+        // Preview
+        previewWeekly: get('previewWeekly'),
+        previewWeeklyGarments: get('previewWeeklyGarments'),
+        previewMonthly: get('previewMonthly'),
+        previewMonthlyGarments: get('previewMonthlyGarments'),
+        previewToday: get('previewToday'),
+        previewTodayGarments: get('previewTodayGarments'),
+        previewTotal: get('previewTotal'),
+        previewHours: get('previewHours'),
         
-        // Settings elements
-        settingsTotal: document.getElementById('settingsTotal'),
-        settingsStorage: document.getElementById('settingsStorage'),
-        settingsBackup: document.getElementById('settingsBackup'),
-        settingsWeekly: document.getElementById('settingsWeekly'), // ADDED
-        settingsMonthly: document.getElementById('settingsMonthly'), // ADDED
+        // Settings
+        settingsTotal: get('settingsTotal'),
+        settingsStorage: get('settingsStorage'),
+        settingsBackup: get('settingsBackup'),
+        settingsWeekly: get('settingsWeekly'),
+        settingsMonthly: get('settingsMonthly'),
         
-        // Export menu
-        dailyExportMenu: document.getElementById('dailyExportMenu'),
-        
-        // Pagination elements
-        prevWeekly: document.getElementById('prevWeekly'),
-        nextWeekly: document.getElementById('nextWeekly'),
-        prevMonthly: document.getElementById('prevMonthly'),
-        nextMonthly: document.getElementById('nextMonthly'),
-        weeklyShowing: document.getElementById('weeklyShowing'),
-        weeklyTotal: document.getElementById('weeklyTotal'),
-        monthlyShowing: document.getElementById('monthlyShowing'),
-        monthlyTotal: document.getElementById('monthlyTotal'),
+        // Pagination
+        prevWeekly: get('prevWeekly'),
+        nextWeekly: get('nextWeekly'),
+        prevMonthly: get('prevMonthly'),
+        nextMonthly: get('nextMonthly'),
+        weeklyShowing: get('weeklyShowing'),
+        weeklyTotal: get('weeklyTotal'),
+        monthlyShowing: get('monthlyShowing'),
+        monthlyTotal: get('monthlyTotal'),
         weeklyPageInfo: document.querySelector('#weekly .page-info'),
         monthlyPageInfo: document.querySelector('#monthly .page-info'),
         
-        // Time calculation elements
-        totalHours: document.getElementById('totalHours'),
-        netHours: document.getElementById('netHours'),
-        breakDuration: document.getElementById('breakDuration'),
+        // Time calculation
+        totalHours: get('totalHours'),
+        netHours: get('netHours'),
+        breakDuration: get('breakDuration'),
         
-        // Desktop navigation
-        desktopNavLinks: document.querySelectorAll('.desktop-nav-link'),
-        
-        // Save indicator
-        saveIndicator: null
+        // Navigation
+        desktopNavLinks: document.querySelectorAll('.desktop-nav-link')
     };
 }
 
@@ -158,52 +172,29 @@ function initTheme() {
     const savedTheme = localStorage.getItem('garmentTheme');
     AppState.isDarkMode = savedTheme === 'dark';
     
-    if (AppState.isDarkMode) {
-        document.body.classList.add('dark-theme');
-        document.body.classList.remove('light-theme');
-    } else {
-        document.body.classList.remove('dark-theme');
-        document.body.classList.add('light-theme');
-    }
-    
+    document.body.classList.toggle('dark-theme', AppState.isDarkMode);
+    document.body.classList.toggle('light-theme', !AppState.isDarkMode);
     updateThemeButtons();
 }
 
 function toggleTheme() {
     AppState.isDarkMode = !AppState.isDarkMode;
     
-    if (AppState.isDarkMode) {
-        document.body.classList.add('dark-theme');
-        document.body.classList.remove('light-theme');
-        localStorage.setItem('garmentTheme', 'dark');
-    } else {
-        document.body.classList.remove('dark-theme');
-        document.body.classList.add('light-theme');
-        localStorage.setItem('garmentTheme', 'light');
-    }
+    document.body.classList.toggle('dark-theme', AppState.isDarkMode);
+    document.body.classList.toggle('light-theme', !AppState.isDarkMode);
     
+    localStorage.setItem('garmentTheme', AppState.isDarkMode ? 'dark' : 'light');
     updateThemeButtons();
 }
 
 function updateThemeButtons() {
-    const themeButtons = [
-        DOM.mobileThemeToggle,
-        DOM.navThemeToggle,
-        DOM.desktopThemeToggle
-    ];
-    
+    const themeButtons = [DOM.mobileThemeToggle, DOM.navThemeToggle, DOM.desktopThemeToggle];
     themeButtons.forEach(button => {
         if (button) {
             const icon = button.querySelector('i');
             const label = button.querySelector('.theme-label');
-            
-            if (icon) {
-                icon.className = AppState.isDarkMode ? 'fas fa-sun' : 'fas fa-moon';
-            }
-            
-            if (label) {
-                label.textContent = AppState.isDarkMode ? 'Light Mode' : 'Dark Mode';
-            }
+            if (icon) icon.className = AppState.isDarkMode ? 'fas fa-sun' : 'fas fa-moon';
+            if (label) label.textContent = AppState.isDarkMode ? 'Light Mode' : 'Dark Mode';
         }
     });
 }
@@ -218,8 +209,7 @@ function generateId() {
 
 function formatDate(dateString) {
     if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
+    return new Date(dateString).toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'short',
         day: 'numeric'
@@ -228,8 +218,7 @@ function formatDate(dateString) {
 
 function formatDateTime(dateString) {
     if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
+    return new Date(dateString).toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'short',
         day: 'numeric',
@@ -249,55 +238,39 @@ function formatTime(timeString) {
 
 function calculateTimeDifference(start, end) {
     if (!start || !end) return 0;
-    
     const startTime = new Date(`2000-01-01T${start}`);
-    const endTime = new Date(`2000-01-01T${end}`);
-    
-    if (endTime < startTime) {
-        endTime.setDate(endTime.getDate() + 1);
-    }
-    
+    let endTime = new Date(`2000-01-01T${end}`);
+    if (endTime < startTime) endTime.setDate(endTime.getDate() + 1);
     return (endTime - startTime) / (1000 * 60 * 60);
 }
 
 function calculateNetHours(startTime, breakTime, endTime) {
     if (!startTime || !endTime) return 0;
-    
     const totalHours = calculateTimeDifference(startTime, endTime);
-    
     if (breakTime) {
         const breakDuration = calculateActualBreakDuration(startTime, breakTime, endTime);
         return Math.max(0, totalHours - breakDuration);
     }
-    
     return totalHours;
 }
 
 function calculateActualBreakDuration(startTime, breakTime, endTime) {
     if (!breakTime || !startTime || !endTime) return 0;
-    
-    // Parse times
     const [breakHour, breakMinute] = breakTime.split(':').map(Number);
     const [startHour, startMinute] = startTime.split(':').map(Number);
     const [endHour, endMinute] = endTime.split(':').map(Number);
     
-    // Convert to minutes for easier calculation
     const breakInMinutes = breakHour * 60 + breakMinute;
     const startInMinutes = startHour * 60 + startMinute;
     const endInMinutes = endHour * 60 + endMinute;
     
-    // Check if break is within work hours
     if (breakInMinutes >= startInMinutes && breakInMinutes <= endInMinutes) {
-        // Break is 1 hour (standard lunch break)
         const breakEndInMinutes = breakInMinutes + 60;
-        
-        // If break extends beyond end time, calculate partial break
         if (breakEndInMinutes > endInMinutes) {
             return (endInMinutes - breakInMinutes) / 60;
         }
         return 1.0;
     }
-    
     return 0;
 }
 
@@ -306,47 +279,24 @@ function formatHours(hours) {
 }
 
 // ============================================
-// Toast Notification System
+// Toast System
 // ============================================
 
 function showToast(message, type = 'success', duration = 5000) {
     const container = document.getElementById('toastContainer');
-    if (!container) {
-        console.error('Toast container not found');
-        return;
-    }
+    if (!container) return;
+    
+    const icons = { success: 'check-circle', error: 'exclamation-circle', warning: 'exclamation-triangle', info: 'info-circle', save: 'save' };
+    const titles = { success: 'Success', error: 'Error', warning: 'Warning', info: 'Information', save: 'Saved' };
     
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
-    toast.setAttribute('role', 'alert');
-    toast.setAttribute('aria-live', 'assertive');
-    toast.setAttribute('aria-atomic', 'true');
-    
-    const icons = {
-        success: 'check-circle',
-        error: 'exclamation-circle',
-        warning: 'exclamation-triangle',
-        info: 'info-circle',
-        save: 'save'
-    };
-    
-    const titles = {
-        success: 'Success',
-        error: 'Error',
-        warning: 'Warning',
-        info: 'Information',
-        save: 'Saved'
-    };
-    
-    const icon = icons[type] || icons.info;
-    const title = titles[type] || 'Information';
-    
     toast.innerHTML = `
-        <i class="fas fa-${icon} toast-icon"></i>
+        <i class="fas fa-${icons[type] || 'info-circle'} toast-icon"></i>
         <div class="toast-content">
-            <h4>${title}</h4>
+            <h4>${titles[type] || 'Information'}</h4>
             <p>${message}</p>
-            ${type === 'save' ? `<small class="text-muted">Just now</small>` : ''}
+            ${type === 'save' ? '<small class="text-muted">Just now</small>' : ''}
         </div>
         <button class="toast-close" onclick="this.parentElement.remove()" aria-label="Close">
             <i class="fas fa-times"></i>
@@ -354,93 +304,52 @@ function showToast(message, type = 'success', duration = 5000) {
     `;
     
     container.appendChild(toast);
-    
-    // Force reflow
     toast.offsetHeight;
-    
     setTimeout(() => toast.classList.add('show'), 10);
     
-    // Auto-remove after duration
     const removeTimer = setTimeout(() => {
         toast.classList.remove('show');
-        setTimeout(() => {
-            if (toast.parentNode === container) {
-                toast.remove();
-            }
-        }, 300);
+        setTimeout(() => toast.remove(), 300);
     }, duration);
     
-    // Pause auto-remove on hover
     toast.addEventListener('mouseenter', () => clearTimeout(removeTimer));
     toast.addEventListener('mouseleave', () => {
         setTimeout(() => {
             toast.classList.remove('show');
-            setTimeout(() => {
-                if (toast.parentNode === container) {
-                    toast.remove();
-                }
-            }, 300);
+            setTimeout(() => toast.remove(), 300);
         }, duration);
     });
 }
 
 // ============================================
-// Form Validation - FIXED duplicate checking
+// Form Validation
 // ============================================
 
 function validateForm(formData) {
     const errors = [];
     
-    if (!formData.name.trim()) {
-        errors.push('Employee name is required');
-    } else if (formData.name.trim().length < 2) {
-        errors.push('Name must be at least 2 characters');
-    }
+    if (!formData.name.trim()) errors.push('Employee name is required');
+    else if (formData.name.trim().length < 2) errors.push('Name must be at least 2 characters');
     
-    if (!formData.type) {
-        errors.push('Employee type is required');
-    }
-    
-    if (!formData.clothes || formData.clothes < 0) {
-        errors.push('Valid number of garments is required (minimum 0)');
-    }
-    
-    if (!formData.date) {
-        errors.push('Work date is required');
-    } else {
-        const selectedDate = new Date(formData.date);
-        const today = new Date();
-        today.setHours(23, 59, 59, 999);
-        
-        if (selectedDate > today) {
-            errors.push('Date cannot be in the future');
-        }
-    }
+    if (!formData.type) errors.push('Employee type is required');
+    if (!formData.clothes || formData.clothes < 0) errors.push('Valid number of garments is required');
+    if (!formData.date) errors.push('Work date is required');
+    else if (new Date(formData.date) > new Date()) errors.push('Date cannot be in the future');
     
     if (!formData.startTime) errors.push('Start time is required');
     if (!formData.breakTime) errors.push('Break time is required');
     if (!formData.endTime) errors.push('End time is required');
     
-    if (formData.startTime && formData.endTime && formData.endTime <= formData.startTime) {
-        errors.push('End time must be after start time');
-    }
+    if (formData.endTime <= formData.startTime) errors.push('End time must be after start time');
+    if (formData.breakTime <= formData.startTime) errors.push('Break time must be after start time');
+    if (formData.endTime <= formData.breakTime) errors.push('Break time must be before end time');
     
-    if (formData.startTime && formData.breakTime && formData.breakTime <= formData.startTime) {
-        errors.push('Break time must be after start time');
-    }
-    
-    if (formData.endTime && formData.breakTime && formData.endTime <= formData.breakTime) {
-        errors.push('Break time must be before end time');
-    }
-    
-    // FIXED: Check for duplicate entry (same name, date, AND type)
     if (formData.name && formData.date && formData.type && !DOM.editId.value) {
         const isDuplicate = AppState.employees.some(emp => 
             emp.name.toLowerCase() === formData.name.toLowerCase().trim() &&
             emp.date === formData.date &&
             emp.type === formData.type
         );
-        
         if (isDuplicate) {
             errors.push(`Employee "${formData.name}" already has a ${formData.type} entry for ${formatDate(formData.date)}`);
         }
@@ -463,7 +372,6 @@ function loadData() {
             AppState.dailyEntries = data.dailyEntries || {};
             AppState.lastSaveTime = data.lastSaved || null;
             
-            // Update backup time display
             if (DOM.settingsBackup && data.lastSaved) {
                 DOM.settingsBackup.textContent = formatDateTime(data.lastSaved);
             }
@@ -475,8 +383,6 @@ function loadData() {
     } catch (error) {
         console.error('Error loading data:', error);
         showToast(`Error loading saved data: ${error.message}`, 'error');
-        
-        // Try to recover with default data
         AppState.employees = [];
         AppState.dailyEntries = {};
         AppState.nextId = 1;
@@ -496,7 +402,6 @@ function saveData() {
         AppState.lastSaveTime = new Date();
         updateStorageInfo();
         
-        // Show save indicator less frequently for better UX
         if (!this.lastSaveToast || (new Date() - this.lastSaveToast) > 30000) {
             showToast('Data saved', 'save', 2000);
             this.lastSaveToast = new Date();
@@ -504,17 +409,12 @@ function saveData() {
         return true;
     } catch (error) {
         console.error('Error saving data:', error);
-        
-        if (error.name === 'QuotaExceededError') {
-            showToast('Storage is full. Please export and clear some data.', 'error');
-        } else {
-            showToast(`Error saving data: ${error.message}`, 'error');
-        }
-        
+        showToast(error.name === 'QuotaExceededError' 
+            ? 'Storage is full. Please export and clear some data.' 
+            : `Error saving data: ${error.message}`, 'error');
         return false;
     }
 }
-
 
 function addEmployee(formData) {
     const employee = {
@@ -537,7 +437,7 @@ function addEmployee(formData) {
     if (saveData()) {
         updateUI();
         updateStats();
-        showToast(`Employee "${employee.name}" added successfully`, 'success');
+        showToast(`Employee "${employee.name}" added`, 'success');
         return true;
     }
     return false;
@@ -545,126 +445,71 @@ function addEmployee(formData) {
 
 function updateEmployee(id, formData) {
     const index = AppState.employees.findIndex(emp => emp.id === id);
-    if (index !== -1) {
-        const oldEmployee = AppState.employees[index];
-        
-        // FIXED: Check for duplicates with same name, date, AND type (excluding current employee)
-        const isDuplicate = AppState.employees.some((emp, idx) => 
-            idx !== index &&
-            emp.name.toLowerCase() === formData.name.toLowerCase().trim() &&
-            emp.date === formData.date &&
-            emp.type === formData.type
-        );
-        
-        if (isDuplicate) {
-            showToast(`Employee "${formData.name}" already has a ${formData.type} entry for ${formatDate(formData.date)}`, 'error');
-            return false;
-        }
-        
-        const updatedEmployee = {
-            ...oldEmployee,
-            name: formData.name.trim(),
-            type: formData.type,
-            clothes: parseInt(formData.clothes) || 0,
-            date: formData.date,
-            startTime: formData.startTime,
-            breakTime: formData.breakTime,
-            endTime: formData.endTime,
-            notes: formData.notes || '',
-            totalHours: calculateTimeDifference(formData.startTime, formData.endTime),
-            netHours: calculateNetHours(formData.startTime, formData.breakTime, formData.endTime),
-            breakDuration: calculateActualBreakDuration(formData.startTime, formData.breakTime, formData.endTime),
-            updatedAt: new Date().toISOString()
-        };
-        
-        AppState.employees[index] = updatedEmployee;
-        if (saveData()) {
-            updateUI();
-            updateStats();
-            showToast(`Employee "${updatedEmployee.name}" updated successfully`, 'success');
-            cancelEditMode();
-            return true;
-        }
+    if (index === -1) return false;
+    
+    const isDuplicate = AppState.employees.some((emp, idx) => 
+        idx !== index &&
+        emp.name.toLowerCase() === formData.name.toLowerCase().trim() &&
+        emp.date === formData.date &&
+        emp.type === formData.type
+    );
+    
+    if (isDuplicate) {
+        showToast(`Employee "${formData.name}" already has a ${formData.type} entry for ${formatDate(formData.date)}`, 'error');
+        return false;
+    }
+    
+    const oldEmployee = AppState.employees[index];
+    const updatedEmployee = {
+        ...oldEmployee,
+        name: formData.name.trim(),
+        type: formData.type,
+        clothes: parseInt(formData.clothes) || 0,
+        date: formData.date,
+        startTime: formData.startTime,
+        breakTime: formData.breakTime,
+        endTime: formData.endTime,
+        notes: formData.notes || '',
+        totalHours: calculateTimeDifference(formData.startTime, formData.endTime),
+        netHours: calculateNetHours(formData.startTime, formData.breakTime, formData.endTime),
+        breakDuration: calculateActualBreakDuration(formData.startTime, formData.breakTime, formData.endTime),
+        updatedAt: new Date().toISOString()
+    };
+    
+    AppState.employees[index] = updatedEmployee;
+    if (saveData()) {
+        updateUI();
+        updateStats();
+        showToast(`Employee "${updatedEmployee.name}" updated`, 'success');
+        cancelEditMode();
+        return true;
     }
     return false;
 }
-// ============================================
-// Styled Confirmation Modal
-// ============================================
 
-let confirmationCallback = null;
-
-function showConfirmation(message, details, callback) {
-    confirmationCallback = callback;
-    
-    const modal = document.getElementById('confirmationModal');
-    const messageEl = document.getElementById('confirmationMessage');
-    const detailsEl = document.getElementById('confirmationDetails');
-    
-    messageEl.textContent = message;
-    detailsEl.textContent = details || '';
-    
-    modal.style.display = 'block';
-    modal.setAttribute('aria-hidden', 'false');
-    document.body.style.overflow = 'hidden';
-    
-    // Focus the confirm button after a short delay
-    setTimeout(() => {
-        document.getElementById('confirmActionButton').focus();
-    }, 100);
-}
-
-function closeConfirmationModal() {
-    const modal = document.getElementById('confirmationModal');
-    modal.style.display = 'none';
-    modal.setAttribute('aria-hidden', 'true');
-    document.body.style.overflow = '';
-    confirmationCallback = null;
-}
-
-// Handle confirm button click
-document.getElementById('confirmActionButton').addEventListener('click', function() {
-    if (confirmationCallback) {
-        confirmationCallback();
-        closeConfirmationModal();
-    }
-});
-
-// Close modal on escape key
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape' && document.getElementById('confirmationModal').style.display === 'block') {
-        closeConfirmationModal();
-    }
-});
-
-// Close modal when clicking outside
-document.getElementById('confirmationModal').addEventListener('click', function(e) {
-    if (e.target === this) {
-        closeConfirmationModal();
-    }
-});
-function deleteEmployee(id) {
+function deleteEmployee(id, event) {
     const employee = AppState.employees.find(emp => emp.id === id);
     if (!employee) return false;
     
     showConfirmation(
         `Delete Employee "${employee.name}"?`,
-        `This will permanently delete the record for ${employee.name} from ${formatDate(employee.date)}. This action cannot be undone.`,
-        function() {
+        `This will permanently delete the record for ${employee.name} from ${formatDate(employee.date)}.\n\nThis action cannot be undone.`,
+        () => {
             const index = AppState.employees.findIndex(emp => emp.id === id);
             if (index !== -1) {
                 AppState.employees.splice(index, 1);
-                
                 if (saveData()) {
                     updateUI();
                     updateStats();
-                    showToast(`Employee "${employee.name}" deleted successfully`, 'success');
+                    showToast(`Employee "${employee.name}" deleted`, 'success');
                 }
             }
-        }
+        },
+        event?.currentTarget
     );
 }
-function clearAllData() {
+
+function clearAllData(event) {
     if (AppState.employees.length === 0 && Object.keys(AppState.dailyEntries).length === 0) {
         showToast('No data to clear', 'warning');
         return;
@@ -673,46 +518,20 @@ function clearAllData() {
     const employeeCount = AppState.employees.length;
     const dailyCount = Object.keys(AppState.dailyEntries).length;
     let details = '';
-    
     if (employeeCount > 0) details += `• ${employeeCount} employee records\n`;
     if (dailyCount > 0) details += `• ${dailyCount} days of daily entries\n`;
+    details += `\nThis action cannot be undone.`;
     
-    showConfirmation(
-        'Clear All Data?',
-        details + '\nThis action cannot be undone.',
-        function() {
-            AppState.employees = [];
-            AppState.dailyEntries = {};
-            AppState.nextId = 1;
-            if (saveData()) {
-                updateUI();
-                updateStats();
-                showToast('All data cleared successfully', 'success');
-            }
+    showConfirmation('Clear All Data?', details, () => {
+        AppState.employees = [];
+        AppState.dailyEntries = {};
+        AppState.nextId = 1;
+        if (saveData()) {
+            updateUI();
+            updateStats();
+            showToast('All data cleared', 'success');
         }
-    );
-}
-function clearDailyEntries() {
-    const today = new Date().toISOString().split('T')[0];
-    const todayEntries = AppState.dailyEntries[today] || {};
-    const entryCount = Object.keys(todayEntries).length;
-    
-    if (entryCount === 0) {
-        showToast('No daily entries for today', 'warning');
-        return;
-    }
-    
-    showConfirmation(
-        `Clear Today's Entries?`,
-        `This will clear ${entryCount} daily entries for ${formatDate(today)}.\nThis action cannot be undone.`,
-        function() {
-            delete AppState.dailyEntries[today];
-            if (saveData()) {
-                updateDailyTable();
-                showToast('Today\'s entries cleared successfully', 'success');
-            }
-        }
-    );
+    }, event?.currentTarget);
 }
 
 function importData(file) {
@@ -720,27 +539,8 @@ function importData(file) {
     reader.onload = function(e) {
         try {
             const data = JSON.parse(e.target.result);
-            
-            // Validate data structure
-            if (!data || typeof data !== 'object') {
+            if (!data || !data.employees || !Array.isArray(data.employees)) {
                 throw new Error('Invalid file format');
-            }
-            
-            if (!data.employees || !Array.isArray(data.employees)) {
-                throw new Error('Invalid data structure: employees array missing');
-            }
-            
-            // Additional validation
-            const isValidEmployee = (emp) => {
-                return emp && 
-                       typeof emp.name === 'string' &&
-                       typeof emp.type === 'string' &&
-                       !isNaN(parseInt(emp.clothes));
-            };
-            
-            const invalidEmployees = data.employees.filter(emp => !isValidEmployee(emp));
-            if (invalidEmployees.length > 0) {
-                throw new Error(`Found ${invalidEmployees.length} invalid employee records`);
             }
             
             if (confirm(`Import ${data.employees.length} employee records?\nThis will replace all current data.`)) {
@@ -750,17 +550,14 @@ function importData(file) {
                 if (saveData()) {
                     updateUI();
                     updateStats();
-                    showToast(`Imported ${data.employees.length} employee records successfully`, 'success');
+                    showToast(`Imported ${data.employees.length} records`, 'success');
                 }
             }
         } catch (error) {
-            console.error('Import error:', error);
             showToast(`Error importing data: ${error.message}`, 'error');
         }
     };
-    reader.onerror = () => {
-        showToast('Error reading file', 'error');
-    };
+    reader.onerror = () => showToast('Error reading file', 'error');
     reader.readAsText(file);
 }
 
@@ -768,21 +565,11 @@ function updateStorageInfo() {
     try {
         const data = localStorage.getItem('garmentEmployees');
         const size = data ? (data.length / 1024).toFixed(2) : '0';
-        if (DOM.settingsStorage) {
-            DOM.settingsStorage.textContent = `${size} KB`;
-        }
+        if (DOM.settingsStorage) DOM.settingsStorage.textContent = `${size} KB`;
         
         const lastBackup = localStorage.getItem('lastBackup');
         if (lastBackup && DOM.settingsBackup) {
             DOM.settingsBackup.textContent = formatDateTime(lastBackup);
-        }
-        
-        // Check storage usage
-        const used = JSON.stringify(localStorage).length / 1024;
-        const limit = 5120; // 5MB typical limit
-        
-        if (used > limit * 0.8) {
-            showToast(`Storage is almost full (${(used/limit*100).toFixed(1)}%). Consider exporting data.`, 'warning');
         }
     } catch (error) {
         console.error('Storage info error:', error);
@@ -795,36 +582,28 @@ function updateStorageInfo() {
 
 function editEmployee(id) {
     const employee = AppState.employees.find(emp => emp.id === id);
-    if (employee) {
-        DOM.editId.value = employee.id;
-        DOM.employeeName.value = employee.name;
-        DOM.dailyClothes.value = employee.clothes;
-        DOM.workDate.value = employee.date;
-        DOM.startTime.value = employee.startTime;
-        DOM.breakTime.value = employee.breakTime;
-        DOM.endTime.value = employee.endTime;
-        DOM.notes.value = employee.notes || '';
-        
-        // Reset all radio buttons first
-        document.querySelectorAll('input[name="employeeType"]').forEach(radio => {
-            radio.checked = false;
-        });
-        
-        // Check the correct radio button
-        const correctRadio = document.querySelector(`input[name="employeeType"][value="${employee.type}"]`);
-        if (correctRadio) {
-            correctRadio.checked = true;
-        }
-        
-        DOM.submitForm.style.display = 'none';
-        DOM.updateForm.style.display = 'block';
-        DOM.cancelEdit.style.display = 'inline-flex';
-        
-        showSection('form');
-        updateTimeSummary();
-        
-        showToast(`Editing ${employee.name}`, 'info');
-    }
+    if (!employee) return;
+    
+    DOM.editId.value = employee.id;
+    DOM.employeeName.value = employee.name;
+    DOM.dailyClothes.value = employee.clothes;
+    DOM.workDate.value = employee.date;
+    DOM.startTime.value = employee.startTime;
+    DOM.breakTime.value = employee.breakTime;
+    DOM.endTime.value = employee.endTime;
+    DOM.notes.value = employee.notes || '';
+    
+    document.querySelectorAll('input[name="employeeType"]').forEach(radio => {
+        radio.checked = radio.value === employee.type;
+    });
+    
+    DOM.submitForm.style.display = 'none';
+    DOM.updateForm.style.display = 'block';
+    DOM.cancelEdit.style.display = 'inline-flex';
+    
+    showSection('form');
+    updateTimeSummary();
+    showToast(`Editing ${employee.name}`, 'info');
 }
 
 function cancelEditMode() {
@@ -833,242 +612,124 @@ function cancelEditMode() {
     DOM.updateForm.style.display = 'none';
     DOM.cancelEdit.style.display = 'none';
     
-    // Properly reset the form including radio buttons
-    if (DOM.employeeForm) {
-        DOM.employeeForm.reset();
-    }
-    
-    // Manually uncheck radio buttons
-    document.querySelectorAll('input[name="employeeType"]').forEach(radio => {
-        radio.checked = false;
-    });
+    if (DOM.employeeForm) DOM.employeeForm.reset();
+    document.querySelectorAll('input[name="employeeType"]').forEach(radio => radio.checked = false);
     
     updateForm();
     showToast('Edit cancelled', 'info');
 }
 
 // ============================================
-// Daily Entry System - COMPLETELY FIXED
+// Daily Entry System
 // ============================================
 
 function initDailyEntry() {
     const today = new Date().toISOString().split('T')[0];
-    if (DOM.todayDate) {
-        DOM.todayDate.textContent = formatDate(today);
-    }
+    if (DOM.todayDate) DOM.todayDate.textContent = formatDate(today);
     if (DOM.dailyDate) {
         DOM.dailyDate.value = today;
         DOM.dailyDate.max = today;
-        
-        // Add event listener for date change
         DOM.dailyDate.addEventListener('change', handleDailyDateChange);
     }
     AppState.selectedDate = today;
     
-    // Initialize daily entries for today if not exists
-    if (!AppState.dailyEntries[today]) {
-        AppState.dailyEntries[today] = {};
-    }
-    
+    if (!AppState.dailyEntries[today]) AppState.dailyEntries[today] = {};
     loadDailyEntries();
-    createDailyModal();
 }
 
 function handleDailyDateChange() {
     AppState.selectedDate = DOM.dailyDate.value;
-    // Clear unsaved changes for previous date
     dailyInputChanges.clear();
-    // Re-render table for new date
     updateDailyTable();
 }
-
 
 function loadDailyEntries() {
     const date = DOM.dailyDate ? DOM.dailyDate.value : AppState.selectedDate;
     if (!date) return;
-    
-    // Ensure data structure exists for this date
-    if (!AppState.dailyEntries[date]) {
-        AppState.dailyEntries[date] = {};
-    }
-    
+    if (!AppState.dailyEntries[date]) AppState.dailyEntries[date] = {};
     updateDailyTable();
 }
-// Store input changes locally before saving
-let dailyInputChanges = new Map();
 
-// FIXED: Daily table renders only initially, on date change, or on "Save All"
 function updateDailyTable() {
     const date = DOM.dailyDate ? DOM.dailyDate.value : AppState.selectedDate;
     const dailyData = AppState.dailyEntries[date] || {};
     
-    // Get ALL unique employee names from AppState.employees
     const allEmployees = [];
     AppState.employees.forEach(emp => {
-        if (!allEmployees.includes(emp.name)) {
-            allEmployees.push(emp.name);
-        }
+        if (!allEmployees.includes(emp.name)) allEmployees.push(emp.name);
     });
-    
-    // Sort alphabetically
     allEmployees.sort();
     
-    // Update "Add All" button state
     if (DOM.addAllToday) {
-        if (allEmployees.length === 0) {
-            DOM.addAllToday.disabled = true;
-            DOM.addAllToday.title = 'No employees available';
-        } else {
-            DOM.addAllToday.disabled = false;
-            DOM.addAllToday.title = `Add all ${allEmployees.length} employees`;
-        }
+        DOM.addAllToday.disabled = allEmployees.length === 0;
+        DOM.addAllToday.title = allEmployees.length > 0 ? `Add all ${allEmployees.length} employees` : 'No employees available';
     }
     
-    // Update total employees count
-    if (DOM.totalEmployees) {
-        DOM.totalEmployees.textContent = allEmployees.length;
-    }
+    if (DOM.totalEmployees) DOM.totalEmployees.textContent = allEmployees.length;
     
     if (allEmployees.length === 0) {
-        if (DOM.dailyEmpty) {
-            DOM.dailyEmpty.classList.add('show');
-        }
-        if (DOM.dailyTableBody) {
-            DOM.dailyTableBody.innerHTML = '';
-        }
+        if (DOM.dailyEmpty) DOM.dailyEmpty.classList.add('show');
+        if (DOM.dailyTableBody) DOM.dailyTableBody.innerHTML = '';
         updateDailyStats();
         return;
     }
     
-    if (DOM.dailyEmpty) {
-        DOM.dailyEmpty.classList.remove('show');
-    }
+    if (DOM.dailyEmpty) DOM.dailyEmpty.classList.remove('show');
     
     let html = '';
     allEmployees.forEach(employeeName => {
         const entry = dailyData[employeeName] || {
-            clothes: 0,
-            startTime: '09:00',
-            breakTime: '13:00',
-            endTime: '17:00',
-            notes: ''
+            clothes: 0, startTime: '09:00', breakTime: '13:00', endTime: '17:00', notes: ''
         };
         
         const netHours = calculateNetHours(entry.startTime, entry.breakTime, entry.endTime);
         const breakDuration = calculateActualBreakDuration(entry.startTime, entry.breakTime, entry.endTime);
-        
-        // Check if there are unsaved changes for this employee
         const hasUnsavedChanges = dailyInputChanges.has(employeeName);
         const displayValue = hasUnsavedChanges ? dailyInputChanges.get(employeeName) : entry.clothes;
         
         html += `
             <tr data-employee="${employeeName}">
-                <td>
-                    <div class="employee-info">
-                        <strong>${employeeName}</strong>
-                        ${hasUnsavedChanges ? '<span class="unsaved-badge">*</span>' : ''}
-                    </div>
-                </td>
-                <td>
-                    <span class="badge ${getEmployeeTypeClass(employeeName)}">${getEmployeeType(employeeName)}</span>
-                </td>
-                <td>
-                    <input type="number" class="daily-input" 
-                           value="${displayValue}" 
-                           min="0" 
-                           data-employee="${employeeName}"
-                           placeholder="0"
-                           aria-label="Garments for ${employeeName}"
-                           data-original="${entry.clothes}">
-                </td>
-                <td>
-                    <div class="time-cell">
-                        <small>${formatTime(entry.startTime)} - ${formatTime(entry.endTime)}</small>
-                        <div>Break: ${formatTime(entry.breakTime)} (${formatHours(breakDuration)}h)</div>
-                    </div>
-                </td>
-                <td>
-                    <span class="text-primary daily-hours" data-employee="${employeeName}">${formatHours(netHours)}h</span>
-                </td>
-                <td>
-                    <div class="actions">
-                        <button class="action-btn edit" onclick="openDailyModal('${employeeName.replace(/'/g, "\\'")}')" 
-                                title="Edit Times" aria-label="Edit times for ${employeeName}">
-                            <i class="fas fa-clock"></i>
-                        </button>
-                        <button class="action-btn delete" onclick="removeDailyEntry('${employeeName.replace(/'/g, "\\'")}')" 
-                                title="Remove" aria-label="Remove ${employeeName}">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                </td>
+                <td><div class="employee-info"><strong>${employeeName}</strong>${hasUnsavedChanges ? '<span class="unsaved-badge">*</span>' : ''}</div></td>
+                <td><span class="badge ${getEmployeeTypeClass(employeeName)}">${getEmployeeType(employeeName)}</span></td>
+                <td><input type="number" class="daily-input" value="${displayValue}" min="0" data-employee="${employeeName}" placeholder="0" data-original="${entry.clothes}"></td>
+                <td><div class="time-cell"><small>${formatTime(entry.startTime)} - ${formatTime(entry.endTime)}</small><div>Break: ${formatTime(entry.breakTime)} (${formatHours(breakDuration)}h)</div></div></td>
+                <td><span class="text-primary daily-hours" data-employee="${employeeName}">${formatHours(netHours)}h</span></td>
+                <td><div class="actions"><button class="action-btn edit" onclick="openDailyModal('${employeeName.replace(/'/g, "\\'")}')" title="Edit Times"><i class="fas fa-clock"></i></button><button class="action-btn delete" onclick="removeDailyEntry('${employeeName.replace(/'/g, "\\'")}')" title="Remove"><i class="fas fa-trash"></i></button></div></td>
             </tr>
         `;
     });
     
-    if (DOM.dailyTableBody) {
-        DOM.dailyTableBody.innerHTML = html;
-    }
+    if (DOM.dailyTableBody) DOM.dailyTableBody.innerHTML = html;
     
-    // Simple event listeners - store changes locally, NO saving
     document.querySelectorAll('.daily-input').forEach(input => {
-        // Store changes locally without saving
         input.addEventListener('input', function() {
             const employeeName = this.getAttribute('data-employee');
             const value = parseInt(this.value) || 0;
-            
-            // Store in local map
             dailyInputChanges.set(employeeName, value);
-            
-            // Update UI to show unsaved changes
             updateRowUnsavedStatus(employeeName, true);
-        });
-        
-        // Only update the input field on blur for better UX
-        input.addEventListener('blur', function() {
-            this.classList.remove('focused');
-        });
-        
-        input.addEventListener('focus', function() {
-            this.classList.add('focused');
-        });
-        
-        // Handle Enter key
-        input.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                this.blur();
-            }
         });
     });
     
     updateDailyStats();
 }
-// Function to update row UI when there are unsaved changes
+
 function updateRowUnsavedStatus(employeeName, hasChanges) {
     const row = document.querySelector(`tr[data-employee="${employeeName}"]`);
-    if (row) {
-        const employeeInfo = row.querySelector('.employee-info');
-        let unsavedBadge = employeeInfo.querySelector('.unsaved-badge');
-        
-        if (hasChanges) {
-            if (!unsavedBadge) {
-                unsavedBadge = document.createElement('span');
-                unsavedBadge.className = 'unsaved-badge';
-                unsavedBadge.textContent = '*';
-                unsavedBadge.title = 'Unsaved changes';
-                employeeInfo.appendChild(unsavedBadge);
-            }
-        } else {
-            if (unsavedBadge) {
-                unsavedBadge.remove();
-            }
-        }
+    if (!row) return;
+    
+    const employeeInfo = row.querySelector('.employee-info');
+    let unsavedBadge = employeeInfo.querySelector('.unsaved-badge');
+    
+    if (hasChanges && !unsavedBadge) {
+        unsavedBadge = document.createElement('span');
+        unsavedBadge.className = 'unsaved-badge';
+        unsavedBadge.textContent = '*';
+        unsavedBadge.title = 'Unsaved changes';
+        employeeInfo.appendChild(unsavedBadge);
+    } else if (!hasChanges && unsavedBadge) {
+        unsavedBadge.remove();
     }
 }
-
-
-
 
 function getEmployeeType(employeeName) {
     const employee = AppState.employees.find(emp => emp.name === employeeName);
@@ -1077,29 +738,19 @@ function getEmployeeType(employeeName) {
 
 function getEmployeeTypeClass(employeeName) {
     const employee = AppState.employees.find(emp => emp.name === employeeName);
-    if (!employee) return '';
-    return employee.type === 'weekly' ? 'weekly-badge' : 
-           employee.type === 'monthly' ? 'monthly-badge' : '';
+    return employee ? (employee.type === 'weekly' ? 'weekly-badge' : 'monthly-badge') : '';
 }
 
 function updateDailyStats() {
     const date = DOM.dailyDate ? DOM.dailyDate.value : AppState.selectedDate;
     const dailyData = AppState.dailyEntries[date] || {};
     
-    // Count employees
     const allEmployees = [];
     AppState.employees.forEach(emp => {
-        if (!allEmployees.includes(emp.name)) {
-            allEmployees.push(emp.name);
-        }
+        if (!allEmployees.includes(emp.name)) allEmployees.push(emp.name);
     });
-    const totalEmployees = allEmployees.length;
     
-    // Calculate totals from saved data
-    let activeCount = 0;
-    let totalGarments = 0;
-    let totalHours = 0;
-    let totalBreakHours = 0;
+    let activeCount = 0, totalGarments = 0, totalHours = 0, totalBreakHours = 0;
     
     Object.values(dailyData).forEach(entry => {
         if (entry.clothes > 0) {
@@ -1110,15 +761,12 @@ function updateDailyStats() {
         }
     });
     
-    // Also include unsaved changes in the stats
     dailyInputChanges.forEach((clothes, employeeName) => {
         if (clothes > 0) {
-            // Check if already counted in saved data
             const savedEntry = dailyData[employeeName];
             if (!savedEntry || savedEntry.clothes === 0) {
                 activeCount++;
                 totalGarments += clothes;
-                // Use default times for unsaved entries
                 totalHours += calculateNetHours('09:00', '13:00', '17:00');
                 totalBreakHours += calculateActualBreakDuration('09:00', '13:00', '17:00');
             }
@@ -1127,153 +775,237 @@ function updateDailyStats() {
     
     const avgGarments = activeCount > 0 ? (totalGarments / activeCount).toFixed(1) : '0';
     
-    if (DOM.totalEmployees) DOM.totalEmployees.textContent = totalEmployees;
+    if (DOM.totalEmployees) DOM.totalEmployees.textContent = allEmployees.length;
     if (DOM.dailyActive) DOM.dailyActive.textContent = activeCount;
     if (DOM.dailyGarments) DOM.dailyGarments.textContent = totalGarments;
     if (DOM.dailyHours) DOM.dailyHours.textContent = formatHours(totalHours);
     if (DOM.dailyAvg) DOM.dailyAvg.textContent = avgGarments;
 }
 
-
-
-
-function saveDailyGarment(employeeName, clothes) {
+function addAllToday() {
     const date = DOM.dailyDate ? DOM.dailyDate.value : AppState.selectedDate;
-    if (!date) return;
+    const allEmployees = [];
+    AppState.employees.forEach(emp => {
+        if (!allEmployees.includes(emp.name)) allEmployees.push(emp.name);
+    });
     
-    if (!AppState.dailyEntries[date]) {
-        AppState.dailyEntries[date] = {};
+    if (allEmployees.length === 0) {
+        showToast('No employees available to add', 'warning');
+        return;
     }
     
-    if (!AppState.dailyEntries[date][employeeName]) {
+    AppState.dailyEntries[date] = {};
+    allEmployees.forEach(employeeName => {
+        const employee = AppState.employees.find(emp => emp.name === employeeName);
         AppState.dailyEntries[date][employeeName] = {
             clothes: 0,
-            startTime: '09:00',
-            breakTime: '13:00',
-            endTime: '17:00',
-            notes: ''
+            startTime: employee?.startTime || '09:00',
+            breakTime: employee?.breakTime || '13:00',
+            endTime: employee?.endTime || '17:00',
+            notes: employee?.notes || ''
         };
-    }
+    });
     
-    // Update the data
-    AppState.dailyEntries[date][employeeName].clothes = clothes;
-    
-    // Save to localStorage (but don't re-render table)
     saveData();
-    
-    // Update ONLY the stats - NOT the table
-    updateDailyStats();
+    updateDailyTable();
+    showToast(`Reseted all ${allEmployees.length} employees for ${formatDate(date)}`, 'success');
 }
 
-// NEW: Optimized function to update only specific row
-function updateDailyRowDisplay(employeeName, clothes) {
-    // Find the row for this employee
-    const row = document.querySelector(`tr[data-employee="${employeeName}"]`);
-    if (row) {
-        // Update the input's value attribute (but don't change its actual value if user is typing)
-        const input = row.querySelector('.daily-input');
-        if (input && document.activeElement !== input) {
-            input.value = clothes;
-            input.setAttribute('data-last-value', clothes);
+// FIXED: Save All Daily Entries to Records
+function saveAllDailyEntries() {
+    const date = DOM.dailyDate ? DOM.dailyDate.value : AppState.selectedDate;
+    
+    if (dailyInputChanges.size === 0) {
+        showToast('No changes to save', 'warning');
+        return;
+    }
+    
+    let entriesUpdated = 0;
+    let entriesCreated = 0;
+    
+    dailyInputChanges.forEach((clothes, employeeName) => {
+        if (clothes < 0) return;
+        
+        const existingEntryIndex = AppState.employees.findIndex(emp => 
+            emp.name === employeeName && emp.date === date
+        );
+        
+        const employee = AppState.employees.find(emp => emp.name === employeeName);
+        const type = employee ? employee.type : 'weekly';
+        
+        const dailyEntryData = AppState.dailyEntries[date]?.[employeeName] || {
+            startTime: '09:00', breakTime: '13:00', endTime: '17:00', notes: ''
+        };
+        
+        if (existingEntryIndex !== -1) {
+            // Update existing record
+            AppState.employees[existingEntryIndex] = {
+                ...AppState.employees[existingEntryIndex],
+                clothes: clothes,
+                startTime: dailyEntryData.startTime || AppState.employees[existingEntryIndex].startTime,
+                breakTime: dailyEntryData.breakTime || AppState.employees[existingEntryIndex].breakTime,
+                endTime: dailyEntryData.endTime || AppState.employees[existingEntryIndex].endTime,
+                notes: dailyEntryData.notes || AppState.employees[existingEntryIndex].notes,
+                totalHours: calculateTimeDifference(
+                    dailyEntryData.startTime || AppState.employees[existingEntryIndex].startTime,
+                    dailyEntryData.endTime || AppState.employees[existingEntryIndex].endTime
+                ),
+                netHours: calculateNetHours(
+                    dailyEntryData.startTime || AppState.employees[existingEntryIndex].startTime,
+                    dailyEntryData.breakTime || AppState.employees[existingEntryIndex].breakTime,
+                    dailyEntryData.endTime || AppState.employees[existingEntryIndex].endTime
+                ),
+                breakDuration: calculateActualBreakDuration(
+                    dailyEntryData.startTime || AppState.employees[existingEntryIndex].startTime,
+                    dailyEntryData.breakTime || AppState.employees[existingEntryIndex].breakTime,
+                    dailyEntryData.endTime || AppState.employees[existingEntryIndex].endTime
+                ),
+                updatedAt: new Date().toISOString()
+            };
+            entriesUpdated++;
+        } else {
+            // Create new record
+            const newEntry = {
+                id: generateId(),
+                name: employeeName,
+                type: type,
+                clothes: clothes,
+                date: date,
+                startTime: dailyEntryData.startTime || '09:00',
+                breakTime: dailyEntryData.breakTime || '13:00',
+                endTime: dailyEntryData.endTime || '17:00',
+                notes: dailyEntryData.notes || '',
+                createdAt: new Date().toISOString(),
+                totalHours: calculateTimeDifference(dailyEntryData.startTime || '09:00', dailyEntryData.endTime || '17:00'),
+                netHours: calculateNetHours(dailyEntryData.startTime || '09:00', dailyEntryData.breakTime || '13:00', dailyEntryData.endTime || '17:00'),
+                breakDuration: calculateActualBreakDuration(dailyEntryData.startTime || '09:00', dailyEntryData.breakTime || '13:00', dailyEntryData.endTime || '17:00')
+            };
+            AppState.employees.unshift(newEntry);
+            entriesCreated++;
         }
         
-        // Update the hours calculation if needed
-        const netHoursSpan = row.querySelector('.text-primary');
-        if (netHoursSpan) {
-            const date = DOM.dailyDate ? DOM.dailyDate.value : AppState.selectedDate;
-            const dailyData = AppState.dailyEntries[date] || {};
-            const entry = dailyData[employeeName];
-            
-            if (entry) {
-                const netHours = calculateNetHours(entry.startTime, entry.breakTime, entry.endTime);
-                netHoursSpan.textContent = `${formatHours(netHours)}h`;
-            }
+        // Update daily entry
+        if (!AppState.dailyEntries[date]) AppState.dailyEntries[date] = {};
+        if (!AppState.dailyEntries[date][employeeName]) {
+            AppState.dailyEntries[date][employeeName] = {
+                clothes: 0, startTime: '09:00', breakTime: '13:00', endTime: '17:00', notes: ''
+            };
         }
+        AppState.dailyEntries[date][employeeName].clothes = clothes;
+    });
+    
+    if (entriesUpdated > 0 || entriesCreated > 0) {
+        dailyInputChanges.clear();
+        if (saveData()) {
+            updateUI();
+            updateStats();
+            updateDailyTable();
+            
+            let message = '';
+            if (entriesCreated > 0) message += `${entriesCreated} new entries created. `;
+            if (entriesUpdated > 0) message += `${entriesUpdated} existing entries updated.`;
+            showToast(message, 'success');
+        }
+    } else {
+        showToast('No valid entries to save', 'warning');
     }
 }
 
+// ============================================
+// Modal Functions
+// ============================================
 
-// Daily Modal Functions
-function createDailyModal() {
-    if (document.getElementById('dailyTimeModal')) return;
-    
-    const modalHTML = `
-        <div id="dailyTimeModal" class="modal" aria-hidden="true">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3><i class="fas fa-clock"></i> Edit Daily Time</h3>
-                    <button class="modal-close" onclick="closeDailyModal()" aria-label="Close">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <div class="modal-employee-info">
-                        <h4 id="modalEmployeeName"></h4>
+function createModals() {
+    // Daily Time Modal
+    if (!document.getElementById('dailyTimeModal')) {
+        const modalHTML = `
+            <div id="dailyTimeModal" class="modal" aria-hidden="true">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3><i class="fas fa-clock"></i> Edit Daily Time</h3>
+                        <button class="modal-close" onclick="closeDailyModal()" aria-label="Close">&times;</button>
                     </div>
-                    <div class="input-group">
-                        <label for="modalGarments">
-                            <i class="fas fa-tshirt"></i> Garments Produced
-                        </label>
-                        <input type="number" id="modalGarments" min="0" placeholder="Number of garments">
-                    </div>
-                    <div class="time-inputs">
-                        <div class="time-input-group">
-                            <label for="modalStartTime">Start Time</label>
-                            <input type="time" id="modalStartTime">
+                    <div class="modal-body">
+                        <div class="modal-employee-info">
+                            <h4 id="modalEmployeeName"></h4>
                         </div>
-                        <div class="time-input-group">
-                            <label for="modalBreakTime">Lunch Break</label>
-                            <input type="time" id="modalBreakTime">
+                        <div class="input-group">
+                            <label for="modalGarments"><i class="fas fa-tshirt"></i> Garments Produced</label>
+                            <input type="number" id="modalGarments" min="0" placeholder="Number of garments">
                         </div>
-                        <div class="time-input-group">
-                            <label for="modalEndTime">End Time</label>
-                            <input type="time" id="modalEndTime">
+                        <div class="time-inputs">
+                            <div class="time-input-group"><label for="modalStartTime">Start Time</label><input type="time" id="modalStartTime"></div>
+                            <div class="time-input-group"><label for="modalBreakTime">Lunch Break</label><input type="time" id="modalBreakTime"></div>
+                            <div class="time-input-group"><label for="modalEndTime">End Time</label><input type="time" id="modalEndTime"></div>
+                        </div>
+                        <div class="input-group">
+                            <label for="modalNotes"><i class="fas fa-sticky-note"></i> Notes</label>
+                            <textarea id="modalNotes" rows="3" placeholder="Add notes..."></textarea>
                         </div>
                     </div>
-                    <div class="input-group">
-                        <label for="modalNotes">
-                            <i class="fas fa-sticky-note"></i> Notes
-                        </label>
-                        <textarea id="modalNotes" rows="3" placeholder="Add notes..."></textarea>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" onclick="closeDailyModal()">Cancel</button>
+                        <button class="btn btn-primary" onclick="saveDailyEntry()">Save Changes</button>
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" onclick="closeDailyModal()">Cancel</button>
-                    <button class="btn btn-primary" onclick="saveDailyEntry()">Save Changes</button>
                 </div>
             </div>
-        </div>
-    `;
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        
+        const modal = document.getElementById('dailyTimeModal');
+        modal.addEventListener('click', e => { if (e.target === this) closeDailyModal(); });
+        modal.addEventListener('keydown', e => {
+            if (e.key === 'Escape') closeDailyModal();
+            if (e.key === 'Enter' && e.ctrlKey) saveDailyEntry();
+        });
+    }
     
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-    
-    const modal = document.getElementById('dailyTimeModal');
-    modal.addEventListener('click', function(e) {
-        if (e.target === this) {
-            closeDailyModal();
-        }
-    });
-    
-    // Add keyboard navigation
-    modal.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            closeDailyModal();
-        }
-        if (e.key === 'Enter' && e.ctrlKey) {
-            saveDailyEntry();
-        }
-    });
+    // Confirmation Modal
+    if (!document.getElementById('confirmationModal')) {
+        const modalHTML = `
+            <div id="confirmationModal" class="modal" aria-hidden="true">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3><i class="fas fa-exclamation-triangle"></i> Confirm Action</h3>
+                        <button class="modal-close" onclick="closeConfirmationModal()" aria-label="Close">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="confirmation-content">
+                            <div class="confirmation-icon"><i class="fas fa-exclamation-circle"></i></div>
+                            <p class="confirmation-message" id="confirmationMessage"></p>
+                            <p class="confirmation-details" id="confirmationDetails"></p>
+                            <div class="confirmation-buttons">
+                                <button class="btn btn-secondary" onclick="closeConfirmationModal()">Cancel</button>
+                                <button class="btn btn-danger" id="confirmActionButton">Confirm</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        
+        document.getElementById('confirmActionButton').addEventListener('click', () => {
+            if (confirmationCallback) {
+                confirmationCallback();
+                closeConfirmationModal();
+            }
+        });
+        
+        const modal = document.getElementById('confirmationModal');
+        modal.addEventListener('click', e => { if (e.target === this) closeConfirmationModal(); });
+        modal.addEventListener('keydown', e => { if (e.key === 'Escape') closeConfirmationModal(); });
+    }
 }
 
 function openDailyModal(employeeName) {
     const date = DOM.dailyDate ? DOM.dailyDate.value : AppState.selectedDate;
     const entry = AppState.dailyEntries[date]?.[employeeName] || {
-        clothes: 0,
-        startTime: '09:00',
-        breakTime: '13:00',
-        endTime: '17:00',
-        notes: ''
+        clothes: 0, startTime: '09:00', breakTime: '13:00', endTime: '17:00', notes: ''
     };
     
     AppState.editingDailyId = employeeName;
+    lastFocusedElement = document.activeElement;
     
     document.getElementById('modalEmployeeName').textContent = employeeName;
     document.getElementById('modalGarments').value = entry.clothes;
@@ -1284,13 +1016,10 @@ function openDailyModal(employeeName) {
     
     const modal = document.getElementById('dailyTimeModal');
     modal.style.display = 'block';
-    modal.setAttribute('aria-hidden', 'false');
+    modal.removeAttribute('aria-hidden');
     document.body.style.overflow = 'hidden';
     
-    // Focus first input
-    setTimeout(() => {
-        document.getElementById('modalGarments').focus();
-    }, 100);
+    setTimeout(() => document.getElementById('modalGarments').focus(), 100);
 }
 
 function saveDailyEntry() {
@@ -1305,15 +1034,12 @@ function saveDailyEntry() {
     const modalEndTime = document.getElementById('modalEndTime');
     const modalNotes = document.getElementById('modalNotes');
     
-    // Validate times
     if (modalStartTime.value && modalEndTime.value && modalEndTime.value <= modalStartTime.value) {
         showToast('End time must be after start time', 'error');
         return;
     }
     
-    if (!AppState.dailyEntries[date]) {
-        AppState.dailyEntries[date] = {};
-    }
+    if (!AppState.dailyEntries[date]) AppState.dailyEntries[date] = {};
     
     AppState.dailyEntries[date][AppState.editingDailyId] = {
         clothes: parseInt(modalGarments.value) || 0,
@@ -1323,22 +1049,15 @@ function saveDailyEntry() {
         notes: modalNotes.value
     };
     
-    // Save immediately for modal entries
     saveData();
-    
-    // Update the specific row without re-rendering entire table
     updateDailyRow(AppState.editingDailyId);
-    
     closeDailyModal();
-    
     showToast(`Daily entry saved for ${AppState.editingDailyId}`, 'success');
 }
 
-// NEW: Function to update only one row without re-rendering entire table
 function updateDailyRow(employeeName) {
     const date = DOM.dailyDate ? DOM.dailyDate.value : AppState.selectedDate;
     const entry = AppState.dailyEntries[date]?.[employeeName];
-    
     if (!entry) return;
     
     const row = document.querySelector(`tr[data-employee="${employeeName}"]`);
@@ -1347,35 +1066,25 @@ function updateDailyRow(employeeName) {
     const netHours = calculateNetHours(entry.startTime, entry.breakTime, entry.endTime);
     const breakDuration = calculateActualBreakDuration(entry.startTime, entry.breakTime, entry.endTime);
     
-    // Update input value
     const input = row.querySelector('.daily-input');
     if (input) {
         input.value = entry.clothes;
         input.setAttribute('data-original', entry.clothes);
-        
-        // Clear from unsaved changes if it's there
         dailyInputChanges.delete(employeeName);
         updateRowUnsavedStatus(employeeName, false);
     }
     
-    // Update hours display
     const hoursSpan = row.querySelector('.daily-hours');
-    if (hoursSpan) {
-        hoursSpan.textContent = `${formatHours(netHours)}h`;
-    }
+    if (hoursSpan) hoursSpan.textContent = `${formatHours(netHours)}h`;
     
-    // Update time cell
     const timeCell = row.querySelector('.time-cell');
     if (timeCell) {
-        timeCell.innerHTML = `
-            <small>${formatTime(entry.startTime)} - ${formatTime(entry.endTime)}</small>
-            <div>Break: ${formatTime(entry.breakTime)} (${formatHours(breakDuration)}h)</div>
-        `;
+        timeCell.innerHTML = `<small>${formatTime(entry.startTime)} - ${formatTime(entry.endTime)}</small><div>Break: ${formatTime(entry.breakTime)} (${formatHours(breakDuration)}h)</div>`;
     }
     
-    // Update stats
     updateDailyStats();
 }
+
 function removeDailyEntry(employeeName) {
     const date = DOM.dailyDate ? DOM.dailyDate.value : AppState.selectedDate;
     const entry = AppState.dailyEntries[date]?.[employeeName];
@@ -1385,38 +1094,25 @@ function removeDailyEntry(employeeName) {
         return;
     }
     
-    showConfirmation(
-        `Remove Daily Entry?`,
-        `Remove daily entry for ${employeeName}?\nGarments: ${entry.clothes}`,
-        function() {
-            delete AppState.dailyEntries[date][employeeName];
-            
-            if (Object.keys(AppState.dailyEntries[date]).length === 0) {
-                delete AppState.dailyEntries[date];
-            }
-            
-            saveData();
-            
-            const row = document.querySelector(`tr[data-employee="${employeeName}"]`);
-            if (row) {
-                const input = row.querySelector('.daily-input');
-                if (input) {
-                    input.value = 0;
-                    input.setAttribute('data-original', 0);
-                }
-                
-                const hoursSpan = row.querySelector('.daily-hours');
-                if (hoursSpan) {
-                    hoursSpan.textContent = '0.00h';
-                }
-            }
-            
-            updateDailyStats();
-            showToast(`Entry removed for ${employeeName}`, 'success');
+    showConfirmation(`Remove Daily Entry?`, `Remove daily entry for ${employeeName}?\nGarments: ${entry.clothes}`, () => {
+        delete AppState.dailyEntries[date][employeeName];
+        if (Object.keys(AppState.dailyEntries[date]).length === 0) {
+            delete AppState.dailyEntries[date];
         }
-    );
+        saveData();
+        
+        const row = document.querySelector(`tr[data-employee="${employeeName}"]`);
+        if (row) {
+            const input = row.querySelector('.daily-input');
+            if (input) input.value = 0;
+            const hoursSpan = row.querySelector('.daily-hours');
+            if (hoursSpan) hoursSpan.textContent = '0.00h';
+        }
+        
+        updateDailyStats();
+        showToast(`Entry removed for ${employeeName}`, 'success');
+    });
 }
-
 
 function closeDailyModal() {
     const modal = document.getElementById('dailyTimeModal');
@@ -1426,355 +1122,86 @@ function closeDailyModal() {
     }
     document.body.style.overflow = '';
     AppState.editingDailyId = null;
-}
-// ============================================
-// UPDATED: saveAllDailyEntries - Fix duplicate checking
-// ============================================
-
-function saveAllDailyEntries() {
-    const date = DOM.dailyDate ? DOM.dailyDate.value : AppState.selectedDate;
     
-    if (dailyInputChanges.size === 0) {
-        showToast('No changes to save', 'warning');
-        return;
+    if (lastFocusedElement) {
+        setTimeout(() => lastFocusedElement.focus(), 50);
     }
-    
-    let entriesUpdated = 0;
-    let entriesCreated = 0;
-    
-    // Save all changes from the local map
-    dailyInputChanges.forEach((clothes, employeeName) => {
-        // Find existing entry for this employee on this date
-        const existingIndex = AppState.employees.findIndex(emp => 
-            emp.name === employeeName && emp.date === date
-        );
-        
-        const employee = AppState.employees.find(emp => emp.name === employeeName);
-        const type = employee ? employee.type : 'weekly';
-        
-        if (existingIndex !== -1) {
-            // UPDATE existing entry
-            const dailyEntry = AppState.dailyEntries[date]?.[employeeName] || {
-                startTime: '09:00',
-                breakTime: '13:00',
-                endTime: '17:00',
-                notes: ''
-            };
-            
-            AppState.employees[existingIndex] = {
-                ...AppState.employees[existingIndex],
-                clothes: clothes,
-                startTime: dailyEntry.startTime,
-                breakTime: dailyEntry.breakTime,
-                endTime: dailyEntry.endTime,
-                notes: dailyEntry.notes || AppState.employees[existingIndex].notes,
-                totalHours: calculateTimeDifference(dailyEntry.startTime, dailyEntry.endTime),
-                netHours: calculateNetHours(dailyEntry.startTime, dailyEntry.breakTime, dailyEntry.endTime),
-                breakDuration: calculateActualBreakDuration(dailyEntry.startTime, dailyEntry.breakTime, dailyEntry.endTime),
-                updatedAt: new Date().toISOString()
-            };
-            
-            entriesUpdated++;
-        } else {
-            // CREATE new entry
-            const dailyEntry = AppState.dailyEntries[date]?.[employeeName] || {
-                startTime: '09:00',
-                breakTime: '13:00',
-                endTime: '17:00',
-                notes: ''
-            };
-            
-            const newEntry = {
-                id: generateId(),
-                name: employeeName,
-                type: type,
-                clothes: clothes,
-                date: date,
-                startTime: dailyEntry.startTime,
-                breakTime: dailyEntry.breakTime,
-                endTime: dailyEntry.endTime,
-                notes: dailyEntry.notes || '',
-                createdAt: new Date().toISOString(),
-                totalHours: calculateTimeDifference(dailyEntry.startTime, dailyEntry.endTime),
-                netHours: calculateNetHours(dailyEntry.startTime, dailyEntry.breakTime, dailyEntry.endTime),
-                breakDuration: calculateActualBreakDuration(dailyEntry.startTime, dailyEntry.breakTime, dailyEntry.endTime)
-            };
-            
-            AppState.employees.unshift(newEntry);
-            entriesCreated++;
-        }
-    });
-    
-    if (entriesUpdated > 0 || entriesCreated > 0) {
-        // Clear the local changes map
-        dailyInputChanges.clear();
-        
-        // Save all data
-        if (saveData()) {
-            // Now re-render the table to show saved state
-            updateUI();
-            updateStats();
-            updateDailyTable();
-            
-            let message = '';
-            if (entriesCreated > 0) message += `${entriesCreated} new entries created. `;
-            if (entriesUpdated > 0) message += `${entriesUpdated} existing entries updated.`;
-            
-            showToast(message, 'success');
-        }
-    } else {
-        showToast('No valid entries to save (garments must be > 0)', 'warning');
-    }
+    lastFocusedElement = null;
 }
 
-
-function addAllToday() {
-    const date = DOM.dailyDate ? DOM.dailyDate.value : AppState.selectedDate;
+function showConfirmation(message, details, callback, element = null) {
+    confirmationCallback = callback;
+    confirmationElement = element || document.activeElement;
     
-    // Get all unique employee names
-    const allEmployees = [];
-    AppState.employees.forEach(emp => {
-        if (!allEmployees.includes(emp.name)) {
-            allEmployees.push(emp.name);
-        }
-    });
+    const modal = document.getElementById('confirmationModal');
+    const messageEl = document.getElementById('confirmationMessage');
+    const detailsEl = document.getElementById('confirmationDetails');
     
-    if (allEmployees.length === 0) {
-        showToast('No employees available to add', 'warning');
-        return;
-    }
+    messageEl.textContent = message;
+    detailsEl.textContent = details || '';
     
-    // Initialize entries in AppState
-    AppState.dailyEntries[date] = {};
+    modal.style.display = 'block';
+    modal.removeAttribute('aria-hidden');
+    document.body.style.overflow = 'hidden';
     
-    allEmployees.forEach(employeeName => {
-        const employee = AppState.employees.find(emp => emp.name === employeeName);
-        AppState.dailyEntries[date][employeeName] = {
-            clothes: 0,
-            startTime: employee?.startTime || '09:00',
-            breakTime: employee?.breakTime || '13:00',
-            endTime: employee?.endTime || '17:00',
-            notes: employee?.notes || ''
-        };
-    });
-    
-    saveData();
-    
-    // Re-render the table to show new entries
-    updateDailyTable();
-    
-    showToast(`Added all ${allEmployees.length} employees for ${formatDate(date)}`, 'success');
+    setTimeout(() => document.getElementById('confirmActionButton').focus(), 100);
 }
 
+function closeConfirmationModal() {
+    const modal = document.getElementById('confirmationModal');
+    modal.style.display = 'none';
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+    
+    if (confirmationElement) {
+        setTimeout(() => confirmationElement.focus(), 50);
+    }
+    
+    confirmationCallback = null;
+    confirmationElement = null;
+}
 
 // ============================================
-// MOBILE DOWNLOAD FIX - Handle mobile file downloads
+// Export Functions
 // ============================================
 
-function downloadFile(filename, content, mimeType) {
-    // Create blob
-    const blob = new Blob([content], { type: mimeType });
-    
-    // For mobile browsers, use a different approach
-    if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-        // Mobile device - use different method
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const url = e.target.result;
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            
-            // Trigger download
-            const clickEvent = new MouseEvent('click', {
-                view: window,
-                bubbles: true,
-                cancelable: false
-            });
-            a.dispatchEvent(clickEvent);
-            
-            // Cleanup
-            setTimeout(() => {
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(url);
-            }, 100);
-        };
-        reader.readAsDataURL(blob);
-    } else {
-        // Desktop browser - standard method
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        
-        // Cleanup
-        setTimeout(() => {
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }, 100);
-    }
+function downloadFile(filename, blob) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }, 100);
 }
 
-// Update exportToPDF function for mobile compatibility
-function exportToPDF() {
-    try {
-        if (AppState.employees.length === 0) {
-            showToast('No data to export', 'warning');
-            return;
-        }
-        
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF('p', 'mm', 'a4');
-        const pageWidth = doc.internal.pageSize.width;
-        
-        // ... [existing PDF generation code] ...
-        
-        const fileName = `Garment_Report_${new Date().toISOString().split('T')[0]}.pdf`;
-        
-        // Mobile-compatible download
-        const pdfOutput = doc.output('blob');
-        downloadFile(fileName, pdfOutput, 'application/pdf');
-        
-        showToast('Complete PDF report generated successfully!', 'success');
-        
-    } catch (error) {
-        console.error('PDF Export Error:', error);
-        showToast(`Error generating PDF: ${error.message}`, 'error');
-    }
-}
-
-// Update exportToExcel function for mobile compatibility
-function exportToExcel() {
-    try {
-        if (AppState.employees.length === 0) {
-            showToast('No data to export', 'warning');
-            return;
-        }
-        
-        // ... [existing Excel generation code] ...
-        
-        const fileName = `Garment_Report_${new Date().toISOString().split('T')[0]}.xlsx`;
-        
-        // Mobile-compatible download
-        const excelOutput = XLSX.write(wb, { bookType: 'xlsx', type: 'binary' });
-        const buffer = new ArrayBuffer(excelOutput.length);
-        const view = new Uint8Array(buffer);
-        for (let i = 0; i < excelOutput.length; i++) {
-            view[i] = excelOutput.charCodeAt(i) & 0xFF;
-        }
-        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-        
-        downloadFile(fileName, blob, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        
-        showToast('Complete Excel report generated successfully!', 'success');
-        
-    } catch (error) {
-        console.error('Excel Export Error:', error);
-        showToast(`Error generating Excel: ${error.message}`, 'error');
-    }
-}
-
-// Update daily export functions similarly
-function exportDailyToPDF() {
-    try {
-        const date = DOM.dailyDate ? DOM.dailyDate.value : AppState.selectedDate;
-        const dailyData = AppState.dailyEntries[date] || {};
-        
-        if (Object.keys(dailyData).length === 0) {
-            showToast('No daily data to export', 'warning');
-            return;
-        }
-        
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF('p', 'mm', 'a4');
-        
-        // ... [existing daily PDF generation code] ...
-        
-        const fileName = `Daily_Report_${date.replace(/-/g, '_')}.pdf`;
-        
-        // Mobile-compatible download
-        const pdfOutput = doc.output('blob');
-        downloadFile(fileName, pdfOutput, 'application/pdf');
-        
-        showToast('Daily PDF report generated successfully!', 'success');
-        
-    } catch (error) {
-        console.error('Daily PDF Export Error:', error);
-        showToast(`Error generating daily PDF: ${error.message}`, 'error');
-    }
-}
-
-function exportDailyToExcel() {
-    try {
-        const date = DOM.dailyDate ? DOM.dailyDate.value : AppState.selectedDate;
-        const dailyData = AppState.dailyEntries[date] || {};
-        
-        if (Object.keys(dailyData).length === 0) {
-            showToast('No daily data to export', 'warning');
-            return;
-        }
-        
-        // ... [existing daily Excel generation code] ...
-        
-        const fileName = `Daily_Report_${date.replace(/-/g, '_')}.xlsx`;
-        
-        // Mobile-compatible download
-        const excelOutput = XLSX.write(wb, { bookType: 'xlsx', type: 'binary' });
-        const buffer = new ArrayBuffer(excelOutput.length);
-        const view = new Uint8Array(buffer);
-        for (let i = 0; i < excelOutput.length; i++) {
-            view[i] = excelOutput.charCodeAt(i) & 0xFF;
-        }
-        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-        
-        downloadFile(fileName, blob, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        
-        showToast('Daily Excel report generated successfully!', 'success');
-        
-    } catch (error) {
-        console.error('Daily Excel Export Error:', error);
-        showToast(`Error generating daily Excel: ${error.message}`, 'error');
-    }
-}
-// ============================================
-// Export Functions - COMPLETELY FIXED
-// ============================================
-
-// FIXED: Export dropdown functionality
 function toggleDailyExportMenu() {
     if (!DOM.dailyExportMenu) return;
-    
     const isShowing = DOM.dailyExportMenu.classList.contains('show');
     DOM.dailyExportMenu.classList.toggle('show');
     
-    // Update aria-expanded
     if (DOM.dailyExportButton) {
         DOM.dailyExportButton.setAttribute('aria-expanded', isShowing ? 'false' : 'true');
     }
     
     if (!isShowing) {
-        // Add click outside listener
         setTimeout(() => {
             document.addEventListener('click', closeExportMenuOnClickOutside);
         }, 10);
     } else {
-        // Remove listener if closing
         document.removeEventListener('click', closeExportMenuOnClickOutside);
     }
 }
 
 function closeExportMenuOnClickOutside(e) {
-    if (DOM.dailyExportMenu && !DOM.dailyExportMenu.contains(e.target)) {
-        if (DOM.dailyExportButton && !DOM.dailyExportButton.contains(e.target)) {
-            DOM.dailyExportMenu.classList.remove('show');
-            if (DOM.dailyExportButton) {
-                DOM.dailyExportButton.setAttribute('aria-expanded', 'false');
-            }
-            document.removeEventListener('click', closeExportMenuOnClickOutside);
-        }
+    if (DOM.dailyExportMenu && !DOM.dailyExportMenu.contains(e.target) && DOM.dailyExportButton && !DOM.dailyExportButton.contains(e.target)) {
+        DOM.dailyExportMenu.classList.remove('show');
+        if (DOM.dailyExportButton) DOM.dailyExportButton.setAttribute('aria-expanded', 'false');
+        document.removeEventListener('click', closeExportMenuOnClickOutside);
     }
 }
 
@@ -1795,12 +1222,10 @@ function exportDailyToPDF() {
         // Header
         doc.setFillColor(37, 99, 235);
         doc.rect(0, 0, pageWidth, 25, 'F');
-        
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
         doc.text('DAILY PRODUCTION REPORT', pageWidth / 2, 15, { align: 'center' });
-        
         doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
         doc.text(`Date: ${formatDate(date)}`, pageWidth / 2, 22, { align: 'center' });
@@ -1808,28 +1233,18 @@ function exportDailyToPDF() {
         let yPos = 35;
         
         // Summary
-        let activeCount = 0;
-        let totalGarments = 0;
-        let totalHours = 0;
-        let totalBreakHours = 0;
-        
+        let activeCount = 0, totalGarments = 0, totalHours = 0, totalBreakHours = 0;
         const tableData = [];
         
-        // FIXED: Use unique employees from AppState.employees to avoid duplicates
         const allEmployees = [];
         AppState.employees.forEach(emp => {
-            if (!allEmployees.includes(emp.name)) {
-                allEmployees.push(emp.name);
-            }
+            if (!allEmployees.includes(emp.name)) allEmployees.push(emp.name);
         });
+        allEmployees.sort();
         
-        allEmployees.sort().forEach(employeeName => {
+        allEmployees.forEach(employeeName => {
             const entry = dailyData[employeeName] || {
-                clothes: 0,
-                startTime: '09:00',
-                breakTime: '13:00',
-                endTime: '17:00',
-                notes: ''
+                clothes: 0, startTime: '09:00', breakTime: '13:00', endTime: '17:00', notes: ''
             };
             
             const netHours = calculateNetHours(entry.startTime, entry.breakTime, entry.endTime);
@@ -1857,53 +1272,32 @@ function exportDailyToPDF() {
         doc.setFontSize(11);
         doc.setFont('helvetica', 'bold');
         doc.text('Daily Summary:', 10, yPos);
-        
         yPos += 8;
-        
         doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
         doc.text(`Date: ${formatDate(date)}`, 10, yPos);
         doc.text(`Total Employees: ${allEmployees.length}`, 70, yPos);
         doc.text(`Active Employees: ${activeCount}`, 130, yPos);
-        
         yPos += 6;
         doc.text(`Total Garments: ${totalGarments}`, 10, yPos);
         doc.text(`Total Hours: ${formatHours(totalHours)}`, 70, yPos);
         doc.text(`Total Break: ${formatHours(totalBreakHours)}`, 130, yPos);
-        
         yPos += 10;
         
-        // Daily Table with dynamic column widths
+        // Daily Table
         if (tableData.length > 0) {
             doc.autoTable({
                 head: [['Employee', 'Type', 'Garments', 'Time', 'Hours', 'Break']],
                 body: tableData,
                 startY: yPos,
                 theme: 'grid',
-                headStyles: {
-                    fillColor: [37, 99, 235],
-                    textColor: 255,
-                    fontStyle: 'bold',
-                    fontSize: 8
-                },
-                bodyStyles: {
-                    fontSize: 7,
-                    cellPadding: 2,
-                    overflow: 'linebreak'
-                },
+                headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold', fontSize: 8 },
+                bodyStyles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' },
                 margin: { left: 10, right: 10 },
-                styles: {
-                    fontSize: 7,
-                    cellPadding: 2,
-                    lineWidth: 0.1
-                },
+                styles: { fontSize: 7, cellPadding: 2, lineWidth: 0.1 },
                 columnStyles: {
-                    0: { cellWidth: 35 },
-                    1: { cellWidth: 20 },
-                    2: { cellWidth: 20 },
-                    3: { cellWidth: 40 },
-                    4: { cellWidth: 20 },
-                    5: { cellWidth: 20 }
+                    0: { cellWidth: 35 }, 1: { cellWidth: 20 }, 2: { cellWidth: 20 },
+                    3: { cellWidth: 40 }, 4: { cellWidth: 20 }, 5: { cellWidth: 20 }
                 }
             });
         }
@@ -1918,11 +1312,10 @@ function exportDailyToPDF() {
             doc.text('Generated by Garment Management System', pageWidth / 2, 295, { align: 'center' });
         }
         
-        // Save PDF
         const fileName = `Daily_Report_${date.replace(/-/g, '_')}.pdf`;
-        doc.save(fileName);
-        
-        showToast('Daily PDF report generated successfully!', 'success');
+        const pdfBlob = doc.output('blob');
+        downloadFile(fileName, pdfBlob);
+        showToast('Daily PDF report generated!', 'success');
         
     } catch (error) {
         console.error('Daily PDF Export Error:', error);
@@ -1956,25 +1349,17 @@ function exportDailyToExcel() {
             ['Employee', 'Type', 'Garments', 'Start Time', 'Break Time', 'End Time', 'Net Hours', 'Break Hours', 'Notes']
         ];
         
-        let totalGarments = 0;
-        let totalHours = 0;
-        let totalBreakHours = 0;
+        let totalGarments = 0, totalHours = 0, totalBreakHours = 0;
         
-        // FIXED: Use unique employees to avoid duplicates
         const allEmployees = [];
         AppState.employees.forEach(emp => {
-            if (!allEmployees.includes(emp.name)) {
-                allEmployees.push(emp.name);
-            }
+            if (!allEmployees.includes(emp.name)) allEmployees.push(emp.name);
         });
+        allEmployees.sort();
         
-        allEmployees.sort().forEach(employeeName => {
+        allEmployees.forEach(employeeName => {
             const entry = dailyData[employeeName] || {
-                clothes: 0,
-                startTime: '09:00',
-                breakTime: '13:00',
-                endTime: '17:00',
-                notes: ''
+                clothes: 0, startTime: '09:00', breakTime: '13:00', endTime: '17:00', notes: ''
             };
             const netHours = calculateNetHours(entry.startTime, entry.breakTime, entry.endTime);
             const breakHours = calculateActualBreakDuration(entry.startTime, entry.breakTime, entry.endTime);
@@ -1996,8 +1381,7 @@ function exportDailyToExcel() {
             ]);
         });
         
-        dailyDataArray.push(['']);
-        dailyDataArray.push(['SUMMARY']);
+        dailyDataArray.push([''], ['SUMMARY']);
         dailyDataArray.push(['Total Employees', allEmployees.length]);
         dailyDataArray.push(['Active Employees', Object.values(dailyData).filter(e => e.clothes > 0).length]);
         dailyDataArray.push(['Total Garments', totalGarments]);
@@ -2019,13 +1403,19 @@ function exportDailyToExcel() {
         }, []);
         
         wsDaily['!cols'] = colWidths.map(width => ({ wch: Math.min(width + 2, 50) }));
-        
         XLSX.utils.book_append_sheet(wb, wsDaily, "Daily Report");
         
         const fileName = `Daily_Report_${date.replace(/-/g, '_')}.xlsx`;
-        XLSX.writeFile(wb, fileName);
+        const excelOutput = XLSX.write(wb, { bookType: 'xlsx', type: 'binary' });
+        const buffer = new ArrayBuffer(excelOutput.length);
+        const view = new Uint8Array(buffer);
+        for (let i = 0; i < excelOutput.length; i++) {
+            view[i] = excelOutput.charCodeAt(i) & 0xFF;
+        }
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         
-        showToast('Daily Excel report generated successfully!', 'success');
+        downloadFile(fileName, blob);
+        showToast('Daily Excel report generated!', 'success');
         
     } catch (error) {
         console.error('Daily Excel Export Error:', error);
@@ -2047,19 +1437,17 @@ function exportToPDF() {
         // Header
         doc.setFillColor(37, 99, 235);
         doc.rect(0, 0, pageWidth, 25, 'F');
-        
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
         doc.text('GARMENT WORKER MANAGEMENT SYSTEM', pageWidth / 2, 15, { align: 'center' });
-        
         doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
         doc.text(`Report Generated: ${new Date().toLocaleDateString()}`, pageWidth / 2, 22, { align: 'center' });
         
         let yPos = 35;
         
-        // Summary Section
+        // Summary
         const weekly = AppState.employees.filter(e => e.type === 'weekly');
         const monthly = AppState.employees.filter(e => e.type === 'monthly');
         const weeklyClothes = weekly.reduce((s, e) => s + e.clothes, 0);
@@ -2074,36 +1462,29 @@ function exportToPDF() {
         doc.setFontSize(11);
         doc.setFont('helvetica', 'bold');
         doc.text('Summary Overview', 10, yPos);
-        
         yPos += 8;
-        
         doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
         doc.text(`Total Employees: ${AppState.employees.length}`, 10, yPos);
         doc.text(`Weekly Employees: ${weekly.length}`, 70, yPos);
         doc.text(`Monthly Employees: ${monthly.length}`, 130, yPos);
-        
         yPos += 6;
         doc.text(`Total Garments: ${totalGarments}`, 10, yPos);
         doc.text(`Total Hours: ${formatHours(totalHours)}`, 70, yPos);
         doc.text(`Efficiency: ${efficiency} garments/hour`, 130, yPos);
-        
         yPos += 15;
         
-        // Weekly Employees Table - FIXED: Use unique employees to avoid duplicates
+        // Weekly Employees Table
         if (weekly.length > 0) {
             doc.setFontSize(10);
             doc.setFont('helvetica', 'bold');
             doc.setTextColor(37, 99, 235);
             doc.text('WEEKLY EMPLOYEES', 10, yPos);
             
-            // Create a map to track unique weekly employees by name and date
             const weeklyMap = new Map();
             weekly.forEach(emp => {
                 const key = `${emp.name}_${emp.date}`;
-                if (!weeklyMap.has(key)) {
-                    weeklyMap.set(key, emp);
-                }
+                if (!weeklyMap.has(key)) weeklyMap.set(key, emp);
             });
             
             const weeklyData = Array.from(weeklyMap.values()).map(emp => [
@@ -2120,54 +1501,32 @@ function exportToPDF() {
                 body: weeklyData,
                 startY: yPos + 5,
                 theme: 'grid',
-                headStyles: {
-                    fillColor: [37, 99, 235],
-                    textColor: 255,
-                    fontStyle: 'bold',
-                    fontSize: 8
-                },
-                bodyStyles: {
-                    fontSize: 7,
-                    cellPadding: 2
-                },
+                headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold', fontSize: 8 },
+                bodyStyles: { fontSize: 7, cellPadding: 2 },
                 margin: { left: 10, right: 10 },
-                styles: {
-                    fontSize: 7,
-                    cellPadding: 2,
-                    lineWidth: 0.1
-                },
+                styles: { fontSize: 7, cellPadding: 2, lineWidth: 0.1 },
                 columnStyles: {
-                    0: { cellWidth: 35 },
-                    1: { cellWidth: 25 },
-                    2: { cellWidth: 20 },
-                    3: { cellWidth: 35 },
-                    4: { cellWidth: 20 },
-                    5: { cellWidth: 20 }
+                    0: { cellWidth: 30 }, 1: { cellWidth: 23 }, 2: { cellWidth: 18 },
+                    3: { cellWidth: 32 }, 4: { cellWidth: 18 }, 5: { cellWidth: 18 }
                 }
             });
             
             yPos = doc.lastAutoTable.finalY + 10;
         }
         
-        // Monthly Employees Table - FIXED: Use unique employees to avoid duplicates
+        // Monthly Employees Table
         if (monthly.length > 0) {
-            if (yPos > 200) {
-                doc.addPage();
-                yPos = 20;
-            }
+            if (yPos > 200) { doc.addPage(); yPos = 20; }
             
             doc.setFontSize(10);
             doc.setFont('helvetica', 'bold');
             doc.setTextColor(124, 58, 237);
             doc.text('MONTHLY EMPLOYEES', 10, yPos);
             
-            // Create a map to track unique monthly employees by name and date
             const monthlyMap = new Map();
             monthly.forEach(emp => {
                 const key = `${emp.name}_${emp.date}`;
-                if (!monthlyMap.has(key)) {
-                    monthlyMap.set(key, emp);
-                }
+                if (!monthlyMap.has(key)) monthlyMap.set(key, emp);
             });
             
             const monthlyData = Array.from(monthlyMap.values()).map(emp => [
@@ -2184,29 +1543,13 @@ function exportToPDF() {
                 body: monthlyData,
                 startY: yPos + 5,
                 theme: 'grid',
-                headStyles: {
-                    fillColor: [124, 58, 237],
-                    textColor: 255,
-                    fontStyle: 'bold',
-                    fontSize: 8
-                },
-                bodyStyles: {
-                    fontSize: 7,
-                    cellPadding: 2
-                },
+                headStyles: { fillColor: [124, 58, 237], textColor: 255, fontStyle: 'bold', fontSize: 8 },
+                bodyStyles: { fontSize: 7, cellPadding: 2 },
                 margin: { left: 10, right: 10 },
-                styles: {
-                    fontSize: 7,
-                    cellPadding: 2,
-                    lineWidth: 0.1
-                },
+                styles: { fontSize: 7, cellPadding: 2, lineWidth: 0.1 },
                 columnStyles: {
-                    0: { cellWidth: 35 },
-                    1: { cellWidth: 25 },
-                    2: { cellWidth: 20 },
-                    3: { cellWidth: 35 },
-                    4: { cellWidth: 20 },
-                    5: { cellWidth: 20 }
+                    0: { cellWidth: 30 }, 1: { cellWidth: 23 }, 2: { cellWidth: 18 },
+                    3: { cellWidth: 32 }, 4: { cellWidth: 18 }, 5: { cellWidth: 18 }
                 }
             });
         }
@@ -2218,13 +1561,13 @@ function exportToPDF() {
             doc.setFontSize(7);
             doc.setTextColor(100, 116, 139);
             doc.text(`Page ${i} of ${pageCount}`, pageWidth / 2, 290, { align: 'center' });
-            doc.text('© Garment Management System v3.2.3', pageWidth / 2, 295, { align: 'center' });
+            doc.text('© Garment Management System v3.2.4', pageWidth / 2, 295, { align: 'center' });
         }
         
         const fileName = `Garment_Report_${new Date().toISOString().split('T')[0]}.pdf`;
-        doc.save(fileName);
-        
-        showToast('Complete PDF report generated successfully!', 'success');
+        const pdfBlob = doc.output('blob');
+        downloadFile(fileName, pdfBlob);
+        showToast('Complete PDF report generated!', 'success');
         
     } catch (error) {
         console.error('PDF Export Error:', error);
@@ -2239,28 +1582,19 @@ function exportToExcel() {
             return;
         }
         
-        // FIXED: Use unique employees to avoid duplicates
         const weeklyMap = new Map();
         const monthlyMap = new Map();
         
         AppState.employees.forEach(emp => {
             const key = `${emp.name}_${emp.date}_${emp.type}`;
-            if (emp.type === 'weekly' && !weeklyMap.has(key)) {
-                weeklyMap.set(key, emp);
-            } else if (emp.type === 'monthly' && !monthlyMap.has(key)) {
-                monthlyMap.set(key, emp);
-            }
+            if (emp.type === 'weekly' && !weeklyMap.has(key)) weeklyMap.set(key, emp);
+            else if (emp.type === 'monthly' && !monthlyMap.has(key)) monthlyMap.set(key, emp);
         });
         
         const weekly = Array.from(weeklyMap.values());
         const monthly = Array.from(monthlyMap.values());
-        
         const wb = XLSX.utils.book_new();
-        wb.Props = {
-            Title: "Garment Worker Management Report",
-            Author: "Garment Management System",
-            CreatedDate: new Date()
-        };
+        wb.Props = { Title: "Garment Worker Management Report", Author: "Garment Management System", CreatedDate: new Date() };
         
         if (weekly.length > 0) {
             const weeklyData = [
@@ -2285,11 +1619,9 @@ function exportToExcel() {
                 ]);
             });
             
-            // Summary row
             const weeklyTotalGarments = weekly.reduce((sum, emp) => sum + emp.clothes, 0);
             const weeklyTotalHours = weekly.reduce((sum, emp) => sum + (emp.netHours || 0), 0);
-            weeklyData.push(['']);
-            weeklyData.push(['WEEKLY SUMMARY']);
+            weeklyData.push([''], ['WEEKLY SUMMARY']);
             weeklyData.push(['Total Employees', weekly.length]);
             weeklyData.push(['Total Garments', weeklyTotalGarments]);
             weeklyData.push(['Total Hours', parseFloat(weeklyTotalHours.toFixed(2))]);
@@ -2297,20 +1629,14 @@ function exportToExcel() {
             weeklyData.push(['Efficiency', weeklyTotalHours > 0 ? parseFloat((weeklyTotalGarments / weeklyTotalHours).toFixed(2)) : 0]);
             
             const wsWeekly = XLSX.utils.aoa_to_sheet(weeklyData);
-            
-            // Auto-size columns
             const colWidths = weeklyData.reduce((widths, row) => {
                 row.forEach((cell, colIndex) => {
                     const length = cell ? cell.toString().length : 0;
-                    if (!widths[colIndex] || length > widths[colIndex]) {
-                        widths[colIndex] = length;
-                    }
+                    if (!widths[colIndex] || length > widths[colIndex]) widths[colIndex] = length;
                 });
                 return widths;
             }, []);
-            
             wsWeekly['!cols'] = colWidths.map(width => ({ wch: Math.min(width + 2, 50) }));
-            
             XLSX.utils.book_append_sheet(wb, wsWeekly, "Weekly Employees");
         }
         
@@ -2337,11 +1663,9 @@ function exportToExcel() {
                 ]);
             });
             
-            // Summary row
             const monthlyTotalGarments = monthly.reduce((sum, emp) => sum + emp.clothes, 0);
             const monthlyTotalHours = monthly.reduce((sum, emp) => sum + (emp.netHours || 0), 0);
-            monthlyData.push(['']);
-            monthlyData.push(['MONTHLY SUMMARY']);
+            monthlyData.push([''], ['MONTHLY SUMMARY']);
             monthlyData.push(['Total Employees', monthly.length]);
             monthlyData.push(['Total Garments', monthlyTotalGarments]);
             monthlyData.push(['Total Hours', parseFloat(monthlyTotalHours.toFixed(2))]);
@@ -2349,27 +1673,28 @@ function exportToExcel() {
             monthlyData.push(['Efficiency', monthlyTotalHours > 0 ? parseFloat((monthlyTotalGarments / monthlyTotalHours).toFixed(2)) : 0]);
             
             const wsMonthly = XLSX.utils.aoa_to_sheet(monthlyData);
-            
-            // Auto-size columns
             const colWidths = monthlyData.reduce((widths, row) => {
                 row.forEach((cell, colIndex) => {
                     const length = cell ? cell.toString().length : 0;
-                    if (!widths[colIndex] || length > widths[colIndex]) {
-                        widths[colIndex] = length;
-                    }
+                    if (!widths[colIndex] || length > widths[colIndex]) widths[colIndex] = length;
                 });
                 return widths;
             }, []);
-            
             wsMonthly['!cols'] = colWidths.map(width => ({ wch: Math.min(width + 2, 50) }));
-            
             XLSX.utils.book_append_sheet(wb, wsMonthly, "Monthly Employees");
         }
         
         const fileName = `Garment_Report_${new Date().toISOString().split('T')[0]}.xlsx`;
-        XLSX.writeFile(wb, fileName);
+        const excelOutput = XLSX.write(wb, { bookType: 'xlsx', type: 'binary' });
+        const buffer = new ArrayBuffer(excelOutput.length);
+        const view = new Uint8Array(buffer);
+        for (let i = 0; i < excelOutput.length; i++) {
+            view[i] = excelOutput.charCodeAt(i) & 0xFF;
+        }
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         
-        showToast('Complete Excel report generated successfully!', 'success');
+        downloadFile(fileName, blob);
+        showToast('Complete Excel report generated!', 'success');
         
     } catch (error) {
         console.error('Excel Export Error:', error);
@@ -2384,7 +1709,7 @@ function exportBackup() {
                 exportedAt: new Date().toISOString(),
                 totalEmployees: AppState.employees.length,
                 dailyEntriesCount: Object.keys(AppState.dailyEntries).length,
-                version: '3.2.3'
+                version: '3.2.4'
             },
             employees: AppState.employees,
             nextId: AppState.nextId,
@@ -2393,20 +1718,10 @@ function exportBackup() {
         
         const jsonStr = JSON.stringify(data, null, 2);
         const blob = new Blob([jsonStr], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `garment_backup_${new Date().toISOString().split('T')[0]}.json`;
-        a.style.display = 'none';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        downloadFile(`garment_backup_${new Date().toISOString().split('T')[0]}.json`, blob);
         
         localStorage.setItem('lastBackup', new Date().toISOString());
         updateStorageInfo();
-        
         showToast(`Backup exported successfully (${data.totalEmployees} employees)`, 'success');
     } catch (error) {
         console.error('Backup Export Error:', error);
@@ -2415,7 +1730,7 @@ function exportBackup() {
 }
 
 // ============================================
-// UI Management - FIXED
+// UI Management
 // ============================================
 
 function updateUI() {
@@ -2450,24 +1765,17 @@ function updateTable(type) {
     
     if (!tableBody || !emptyState) return;
     
-    // FIXED: Use unique employees by name and date to avoid duplicates
     let employees = AppState.employees.filter(emp => emp.type === type);
-    
-    // Remove duplicates (same name and date)
     const uniqueMap = new Map();
     employees.forEach(emp => {
         const key = `${emp.name}_${emp.date}`;
-        if (!uniqueMap.has(key)) {
-            uniqueMap.set(key, emp);
-        }
+        if (!uniqueMap.has(key)) uniqueMap.set(key, emp);
     });
-    
     employees = Array.from(uniqueMap.values());
     
-    // Update sort indicators
     updateSortIndicators(type);
-    
     const sortConfig = AppState.sortConfig[type];
+    
     employees.sort((a, b) => {
         let aValue = a[sortConfig.key];
         let bValue = b[sortConfig.key];
@@ -2475,25 +1783,18 @@ function updateTable(type) {
         if (sortConfig.key === 'date') {
             aValue = new Date(a.date);
             bValue = new Date(b.date);
-        }
-        
-        if (sortConfig.key === 'clothes' || sortConfig.key === 'netHours' || sortConfig.key === 'breakDuration') {
+        } else if (['clothes', 'netHours', 'breakDuration'].includes(sortConfig.key)) {
             aValue = parseFloat(aValue) || 0;
             bValue = parseFloat(bValue) || 0;
         }
         
-        if (sortConfig.direction === 'asc') {
-            return aValue > bValue ? 1 : -1;
-        } else {
-            return aValue < bValue ? 1 : -1;
-        }
+        return sortConfig.direction === 'asc' ? (aValue > bValue ? 1 : -1) : (aValue < bValue ? 1 : -1);
     });
     
     const currentPage = AppState.currentPage[type];
     const totalPages = Math.ceil(employees.length / AppState.itemsPerPage);
     const startIndex = (currentPage - 1) * AppState.itemsPerPage;
-    const endIndex = startIndex + AppState.itemsPerPage;
-    const pageEmployees = employees.slice(startIndex, endIndex);
+    const pageEmployees = employees.slice(startIndex, startIndex + AppState.itemsPerPage);
     
     if (pageEmployees.length === 0) {
         tableBody.innerHTML = '';
@@ -2506,41 +1807,17 @@ function updateTable(type) {
     
     tableBody.innerHTML = pageEmployees.map(employee => `
         <tr>
-            <td>
-                <div class="employee-info">
-                    <strong>${employee.name}</strong>
-                    ${employee.notes ? `<small class="text-muted">${employee.notes}</small>` : ''}
-                </div>
-            </td>
+            <td><div class="employee-info"><strong>${employee.name}</strong>${employee.notes ? `<small class="text-muted">${employee.notes}</small>` : ''}</div></td>
             <td>${formatDate(employee.date)}</td>
-            <td>
-                <span class="badge ${type}-badge">${employee.clothes}</span>
-            </td>
-            <td>
-                <span class="text-primary">${formatHours(employee.netHours || 0)}h</span>
-                <small class="text-muted d-block">${formatTime(employee.startTime)} - ${formatTime(employee.endTime)}</small>
-                ${employee.breakDuration ? `<small class="text-muted d-block">Break: ${formatHours(employee.breakDuration)}h</small>` : ''}
-            </td>
-            <td>
-                <div class="actions">
-                    <button class="action-btn edit" onclick="editEmployee('${employee.id}')" title="Edit" aria-label="Edit ${employee.name}">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="action-btn delete" onclick="deleteEmployee('${employee.id}')" title="Delete" aria-label="Delete ${employee.name}">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            </td>
+            <td><span class="badge ${type}-badge">${employee.clothes}</span></td>
+            <td><span class="text-primary">${formatHours(employee.netHours || 0)}h</span><small class="text-muted d-block">${formatTime(employee.startTime)} - ${formatTime(employee.endTime)}</small>${employee.breakDuration ? `<small class="text-muted d-block">Break: ${formatHours(employee.breakDuration)}h</small>` : ''}</td>
+            <td><div class="actions"><button class="action-btn edit" onclick="editEmployee('${employee.id}')" title="Edit"><i class="fas fa-edit"></i></button><button class="action-btn delete" onclick="deleteEmployee('${employee.id}', event)" title="Delete"><i class="fas fa-trash"></i></button></div></td>
         </tr>
     `).join('');
     
     updatePaginationInfo(type, pageEmployees.length, employees.length, currentPage, totalPages);
     updatePaginationButtons(type, currentPage, totalPages);
-    
-    // Update page info
-    if (pageInfo) {
-        pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
-    }
+    if (pageInfo) pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
 }
 
 function updateSortIndicators(type) {
@@ -2562,7 +1839,6 @@ function updateSortIndicators(type) {
 function updatePaginationInfo(type, showing, total, currentPage, totalPages) {
     const showingElement = type === 'weekly' ? DOM.weeklyShowing : DOM.monthlyShowing;
     const totalElement = type === 'weekly' ? DOM.weeklyTotal : DOM.monthlyTotal;
-    
     if (showingElement) showingElement.textContent = showing;
     if (totalElement) totalElement.textContent = total;
 }
@@ -2570,25 +1846,14 @@ function updatePaginationInfo(type, showing, total, currentPage, totalPages) {
 function updatePaginationButtons(type, currentPage, totalPages) {
     const prevBtn = type === 'weekly' ? DOM.prevWeekly : DOM.prevMonthly;
     const nextBtn = type === 'weekly' ? DOM.nextWeekly : DOM.nextMonthly;
-    
-    if (prevBtn) {
-        prevBtn.disabled = currentPage <= 1;
-        prevBtn.setAttribute('aria-disabled', currentPage <= 1);
-    }
-    if (nextBtn) {
-        nextBtn.disabled = currentPage >= totalPages;
-        nextBtn.setAttribute('aria-disabled', currentPage >= totalPages);
-    }
+    if (prevBtn) prevBtn.disabled = currentPage <= 1;
+    if (nextBtn) nextBtn.disabled = currentPage >= totalPages;
 }
 
 function updateForm() {
     const today = new Date().toISOString().split('T')[0];
-    if (DOM.workDate && !DOM.workDate.value) {
-        DOM.workDate.value = today;
-    }
-    if (DOM.workDate) {
-        DOM.workDate.max = today;
-    }
+    if (DOM.workDate && !DOM.workDate.value) DOM.workDate.value = today;
+    if (DOM.workDate) DOM.workDate.max = today;
     
     if (DOM.startTime && !DOM.startTime.value) {
         DOM.startTime.value = '09:00';
@@ -2597,7 +1862,6 @@ function updateForm() {
         updateTimeSummary();
     }
     
-    // Set focus to first input for better UX
     if (DOM.employeeName && AppState.currentSection === 'form') {
         setTimeout(() => {
             if (!document.activeElement || document.activeElement.tagName === 'BODY') {
@@ -2616,7 +1880,6 @@ function updateTimeSummary() {
         const total = calculateTimeDifference(start, end);
         const net = calculateNetHours(start, breakTime, end);
         const breakDuration = calculateActualBreakDuration(start, breakTime, end);
-        
         DOM.totalHours.textContent = formatHours(total);
         DOM.netHours.textContent = formatHours(net);
         DOM.breakDuration.textContent = formatHours(breakDuration);
@@ -2631,35 +1894,35 @@ function updateStats() {
     const weeklyHours = weeklyEmployees.reduce((sum, emp) => sum + (emp.netHours || 0), 0);
     const weeklyAvgClothes = weeklyEmployees.length > 0 ? (weeklyClothes / weeklyEmployees.length).toFixed(1) : '0';
     
+    const monthlyClothes = monthlyEmployees.reduce((sum, emp) => sum + emp.clothes, 0);
+    const monthlyHours = monthlyEmployees.reduce((sum, emp) => sum + (emp.netHours || 0), 0);
+    const monthlyAvgClothes = monthlyEmployees.length > 0 ? (monthlyClothes / monthlyEmployees.length).toFixed(1) : '0';
+    
+    const totalClothes = weeklyClothes + monthlyClothes;
+    const totalHours = weeklyHours + monthlyHours;
+    const efficiency = totalHours > 0 ? (totalClothes / totalHours).toFixed(2) : '0';
+    
     if (DOM.weeklyCount) DOM.weeklyCount.textContent = weeklyEmployees.length;
     if (DOM.weeklyGarments) DOM.weeklyGarments.textContent = weeklyClothes;
     if (DOM.weeklyHours) DOM.weeklyHours.textContent = formatHours(weeklyHours);
     if (DOM.weeklyAvg) DOM.weeklyAvg.textContent = weeklyAvgClothes;
-    
-    const monthlyClothes = monthlyEmployees.reduce((sum, emp) => sum + emp.clothes, 0);
-    const monthlyHours = monthlyEmployees.reduce((sum, emp) => sum + (emp.netHours || 0), 0);
-    const monthlyAvgClothes = monthlyEmployees.length > 0 ? (monthlyClothes / monthlyEmployees.length).toFixed(1) : '0';
     
     if (DOM.monthlyCount) DOM.monthlyCount.textContent = monthlyEmployees.length;
     if (DOM.monthlyGarments) DOM.monthlyGarments.textContent = monthlyClothes;
     if (DOM.monthlyHours) DOM.monthlyHours.textContent = formatHours(monthlyHours);
     if (DOM.monthlyAvg) DOM.monthlyAvg.textContent = monthlyAvgClothes;
     
-    const totalClothes = weeklyClothes + monthlyClothes;
-    const totalHours = weeklyHours + monthlyHours;
-    const efficiency = totalHours > 0 ? (totalClothes / totalHours).toFixed(2) : '0';
-    
     if (DOM.desktopTotal) DOM.desktopTotal.textContent = AppState.employees.length;
     if (DOM.desktopGarments) DOM.desktopGarments.textContent = totalClothes;
     if (DOM.desktopHours) DOM.desktopHours.textContent = formatHours(totalHours);
-    if (DOM.desktopEfficiency) DOM.desktopEfficiency.textContent = efficiency; // FIXED
+    if (DOM.desktopEfficiency) DOM.desktopEfficiency.textContent = efficiency;
     if (DOM.footerTotal) DOM.footerTotal.textContent = AppState.employees.length;
     if (DOM.footerGarments) DOM.footerGarments.textContent = totalClothes;
     if (DOM.footerEfficiency) DOM.footerEfficiency.textContent = efficiency;
     
     if (DOM.settingsTotal) DOM.settingsTotal.textContent = AppState.employees.length;
-    if (DOM.settingsWeekly) DOM.settingsWeekly.textContent = weeklyEmployees.length; // FIXED
-    if (DOM.settingsMonthly) DOM.settingsMonthly.textContent = monthlyEmployees.length; // FIXED
+    if (DOM.settingsWeekly) DOM.settingsWeekly.textContent = weeklyEmployees.length;
+    if (DOM.settingsMonthly) DOM.settingsMonthly.textContent = monthlyEmployees.length;
 }
 
 function updatePreview() {
@@ -2686,71 +1949,45 @@ function updatePreview() {
 }
 
 // ============================================
-// Navigation Management - ACCESSIBILITY FIXED
+// Navigation
 // ============================================
 
 function showSection(sectionId) {
-    // Hide all sections
     document.querySelectorAll('.content-section').forEach(section => {
-        section.classList.remove('active');
         section.style.display = 'none';
+        section.classList.remove('active');
     });
     
-    // Update navigation links
     document.querySelectorAll('.nav-link, .nav-item, .desktop-nav-link').forEach(link => {
         link.classList.remove('active');
         link.removeAttribute('aria-current');
     });
     
-    // Show selected section
     const section = document.getElementById(sectionId);
     if (section) {
-        section.classList.add('active');
         section.style.display = 'block';
-        
+        section.classList.add('active');
         AppState.currentSection = sectionId;
         
-        // Update active navigation links
         const navLink = document.querySelector(`.nav-link[href="#${sectionId}"]`);
         const desktopNavLink = document.querySelector(`.desktop-nav-link[href="#${sectionId}"]`);
         const navItem = document.querySelector(`.nav-item[href="#${sectionId}"]`);
         
-        if (navLink) {
-            navLink.classList.add('active');
-            navLink.setAttribute('aria-current', 'page');
-        }
-        if (desktopNavLink) {
-            desktopNavLink.classList.add('active');
-            desktopNavLink.setAttribute('aria-current', 'page');
-        }
-        if (navItem) {
-            navItem.classList.add('active');
-            navItem.setAttribute('aria-current', 'page');
-        }
+        if (navLink) { navLink.classList.add('active'); navLink.setAttribute('aria-current', 'page'); }
+        if (desktopNavLink) { desktopNavLink.classList.add('active'); desktopNavLink.setAttribute('aria-current', 'page'); }
+        if (navItem) { navItem.classList.add('active'); navItem.setAttribute('aria-current', 'page'); }
         
-        // Hide mobile menu
         hideMobileMenu();
-        
-        // Close export menu if open
         if (DOM.dailyExportMenu) {
             DOM.dailyExportMenu.classList.remove('show');
-            if (DOM.dailyExportButton) {
-                DOM.dailyExportButton.setAttribute('aria-expanded', 'false');
-            }
+            if (DOM.dailyExportButton) DOM.dailyExportButton.setAttribute('aria-expanded', 'false');
         }
         
-        // Scroll to top smoothly
         window.scrollTo({ top: 0, behavior: 'smooth' });
-        
-        // Update URL hash without scrolling
         window.history.replaceState(null, null, `#${sectionId}`);
         
-        // Update form for the new section
-        if (sectionId === 'form') {
-            updateForm();
-        } else if (sectionId === 'daily') {
-            updateDailyTable();
-        }
+        if (sectionId === 'form') updateForm();
+        else if (sectionId === 'daily') updateDailyTable();
     }
 }
 
@@ -2769,152 +2006,50 @@ function hideMobileMenu() {
 }
 
 function setupNavigation() {
-    // Mobile menu toggle
     if (DOM.menuToggle) {
         DOM.menuToggle.addEventListener('click', showMobileMenu);
-        DOM.menuToggle.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                showMobileMenu();
-            }
-        });
+        DOM.menuToggle.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showMobileMenu(); } });
     }
+    if (DOM.closeNav) DOM.closeNav.addEventListener('click', hideMobileMenu);
     
-    if (DOM.closeNav) {
-        DOM.closeNav.addEventListener('click', hideMobileMenu);
-    }
-    
-    // Bottom navigation
-    document.querySelectorAll('.nav-link').forEach(link => {
+    document.querySelectorAll('.nav-link, .nav-item, .desktop-nav-link').forEach(link => {
         link.addEventListener('click', function(e) {
             e.preventDefault();
             const href = this.getAttribute('href');
             if (href && href.startsWith('#')) {
-                const sectionId = href.substring(1);
-                showSection(sectionId);
+                showSection(href.substring(1));
                 hideMobileMenu();
             }
         });
-        
-        // Keyboard navigation
-        link.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                link.click();
-            }
-        });
+        link.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); link.click(); } });
     });
     
-    // Side navigation
-    document.querySelectorAll('.nav-item').forEach(item => {
-        item.addEventListener('click', function(e) {
-            e.preventDefault();
-            const href = this.getAttribute('href');
-            if (href && href.startsWith('#')) {
-                const sectionId = href.substring(1);
-                showSection(sectionId);
-                hideMobileMenu();
-            }
-        });
-        
-        // Keyboard navigation
-        item.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                item.click();
-            }
-        });
-    });
+    if (DOM.mobileThemeToggle) DOM.mobileThemeToggle.addEventListener('click', toggleTheme);
+    if (DOM.navThemeToggle) DOM.navThemeToggle.addEventListener('click', toggleTheme);
+    if (DOM.desktopThemeToggle) DOM.desktopThemeToggle.addEventListener('click', toggleTheme);
     
-    // Desktop navigation
-    if (DOM.desktopNavLinks) {
-        DOM.desktopNavLinks.forEach(link => {
-            link.addEventListener('click', function(e) {
-                e.preventDefault();
-                const href = this.getAttribute('href');
-                if (href && href.startsWith('#')) {
-                    const sectionId = href.substring(1);
-                    showSection(sectionId);
-                }
-            });
-            
-            // Keyboard navigation
-            link.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    link.click();
-                }
-            });
-        });
-    }
-    
-    // Close mobile menu when clicking outside
     document.addEventListener('click', function(e) {
-        if (DOM.mobileNav && DOM.mobileNav.classList.contains('active') &&
-            !DOM.mobileNav.contains(e.target) && 
-            !DOM.menuToggle.contains(e.target)) {
+        if (DOM.mobileNav && DOM.mobileNav.classList.contains('active') && !DOM.mobileNav.contains(e.target) && !DOM.menuToggle.contains(e.target)) {
             hideMobileMenu();
         }
     });
     
-    // Theme toggle
-    if (DOM.mobileThemeToggle) {
-        DOM.mobileThemeToggle.addEventListener('click', toggleTheme);
-        DOM.mobileThemeToggle.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                toggleTheme();
-            }
-        });
-    }
-    
-    if (DOM.navThemeToggle) {
-        DOM.navThemeToggle.addEventListener('click', toggleTheme);
-    }
-    
-    if (DOM.desktopThemeToggle) {
-        DOM.desktopThemeToggle.addEventListener('click', toggleTheme);
-        DOM.desktopThemeToggle.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                toggleTheme();
-            }
-        });
-    }
-    
-    // Handle hash change
-    window.addEventListener('hashchange', function() {
-        const hash = window.location.hash.substring(1);
-        if (hash && ['form', 'daily', 'weekly', 'monthly', 'export', 'settings'].includes(hash)) {
-            setTimeout(() => showSection(hash), 100);
-        }
-    });
-    
-    // Handle initial hash
-    if (window.location.hash) {
-        const hash = window.location.hash.substring(1);
-        if (hash && ['form', 'daily', 'weekly', 'monthly', 'export', 'settings'].includes(hash)) {
-            setTimeout(() => showSection(hash), 100);
-        }
-    }
-    
-    // Escape key to close modals/menus
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
             if (DOM.dailyExportMenu && DOM.dailyExportMenu.classList.contains('show')) {
                 DOM.dailyExportMenu.classList.remove('show');
-                if (DOM.dailyExportButton) {
-                    DOM.dailyExportButton.setAttribute('aria-expanded', 'false');
-                }
+                if (DOM.dailyExportButton) DOM.dailyExportButton.setAttribute('aria-expanded', 'false');
             }
             closeDailyModal();
             hideMobileMenu();
         }
+        if (e.ctrlKey && e.key === 's') { e.preventDefault(); saveData(); }
+        if (e.ctrlKey && e.key === 'e') { e.preventDefault(); showSection('export'); }
     });
 }
 
 // ============================================
-// Event Listeners - FIXED: Added daily export button
+// Event Listeners
 // ============================================
 
 function setupEventListeners() {
@@ -2935,7 +2070,6 @@ function setupEventListeners() {
             };
             
             const errors = validateForm(formData);
-            
             if (errors.length > 0) {
                 errors.forEach(error => showToast(error, 'error'));
                 return;
@@ -2943,10 +2077,7 @@ function setupEventListeners() {
             
             if (addEmployee(formData)) {
                 DOM.employeeForm.reset();
-                // Manually reset radio buttons
-                document.querySelectorAll('input[name="employeeType"]').forEach(radio => {
-                    radio.checked = false;
-                });
+                document.querySelectorAll('input[name="employeeType"]').forEach(radio => radio.checked = false);
                 updateForm();
                 showSection('weekly');
             }
@@ -2971,7 +2102,6 @@ function setupEventListeners() {
             };
             
             const errors = validateForm(formData);
-            
             if (errors.length > 0) {
                 errors.forEach(error => showToast(error, 'error'));
                 return;
@@ -2984,13 +2114,8 @@ function setupEventListeners() {
     // Clear form
     if (DOM.clearForm) {
         DOM.clearForm.addEventListener('click', () => {
-            if (DOM.employeeForm) {
-                DOM.employeeForm.reset();
-            }
-            // Manually reset radio buttons
-            document.querySelectorAll('input[name="employeeType"]').forEach(radio => {
-                radio.checked = false;
-            });
+            if (DOM.employeeForm) DOM.employeeForm.reset();
+            document.querySelectorAll('input[name="employeeType"]').forEach(radio => radio.checked = false);
             updateForm();
             cancelEditMode();
             showToast('Form cleared', 'info');
@@ -2998,11 +2123,9 @@ function setupEventListeners() {
     }
     
     // Cancel edit
-    if (DOM.cancelEdit) {
-        DOM.cancelEdit.addEventListener('click', cancelEditMode);
-    }
+    if (DOM.cancelEdit) DOM.cancelEdit.addEventListener('click', cancelEditMode);
     
-    // Time input changes
+    // Time inputs
     if (DOM.startTime) {
         DOM.startTime.addEventListener('change', updateTimeSummary);
         DOM.startTime.addEventListener('input', updateTimeSummary);
@@ -3016,20 +2139,14 @@ function setupEventListeners() {
         DOM.endTime.addEventListener('input', updateTimeSummary);
     }
     
-    // Daily Export Button - FIXED: Added event listener
-    if (DOM.dailyExportButton) {
-        DOM.dailyExportButton.addEventListener('click', toggleDailyExportMenu);
-    }
+    // Daily Export Button
+    if (DOM.dailyExportButton) DOM.dailyExportButton.addEventListener('click', toggleDailyExportMenu);
     
     // Add all today
-    if (DOM.addAllToday) {
-        DOM.addAllToday.addEventListener('click', addAllToday);
-    }
+    if (DOM.addAllToday) DOM.addAllToday.addEventListener('click', addAllToday);
     
     // Save all daily entries
-    if (DOM.saveDailyEntries) {
-        DOM.saveDailyEntries.addEventListener('click', saveAllDailyEntries);
-    }
+    if (DOM.saveDailyEntries) DOM.saveDailyEntries.addEventListener('click', saveAllDailyEntries);
     
     // Import file
     const importFile = document.getElementById('importFile');
@@ -3037,18 +2154,16 @@ function setupEventListeners() {
         importFile.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file) {
-                if (file.size > 5 * 1024 * 1024) { // 5MB limit
+                if (file.size > 5 * 1024 * 1024) {
                     showToast('File too large (max 5MB)', 'error');
                     e.target.value = '';
                     return;
                 }
-                
                 if (file.type !== 'application/json') {
                     showToast('Please select a JSON file', 'error');
                     e.target.value = '';
                     return;
                 }
-                
                 importData(file);
             }
             e.target.value = '';
@@ -3065,12 +2180,10 @@ function setupEventListeners() {
             }
         });
     }
-    
     if (DOM.nextWeekly) {
         DOM.nextWeekly.addEventListener('click', () => {
             const weeklyCount = AppState.employees.filter(e => e.type === 'weekly').length;
             const totalPages = Math.ceil(weeklyCount / AppState.itemsPerPage);
-            
             if (AppState.currentPage.weekly < totalPages) {
                 AppState.currentPage.weekly++;
                 updateTable('weekly');
@@ -3078,7 +2191,6 @@ function setupEventListeners() {
             }
         });
     }
-    
     if (DOM.prevMonthly) {
         DOM.prevMonthly.addEventListener('click', () => {
             if (AppState.currentPage.monthly > 1) {
@@ -3088,12 +2200,10 @@ function setupEventListeners() {
             }
         });
     }
-    
     if (DOM.nextMonthly) {
         DOM.nextMonthly.addEventListener('click', () => {
             const monthlyCount = AppState.employees.filter(e => e.type === 'monthly').length;
             const totalPages = Math.ceil(monthlyCount / AppState.itemsPerPage);
-            
             if (AppState.currentPage.monthly < totalPages) {
                 AppState.currentPage.monthly++;
                 updateTable('monthly');
@@ -3102,7 +2212,7 @@ function setupEventListeners() {
         });
     }
     
-    // Table sorting with visual feedback
+    // Table sorting
     document.querySelectorAll('[data-sort]').forEach(th => {
         th.addEventListener('click', () => {
             const table = th.closest('.data-table').id;
@@ -3110,17 +2220,14 @@ function setupEventListeners() {
             const key = th.dataset.sort;
             
             if (AppState.sortConfig[type].key === key) {
-                AppState.sortConfig[type].direction = 
-                    AppState.sortConfig[type].direction === 'asc' ? 'desc' : 'asc';
+                AppState.sortConfig[type].direction = AppState.sortConfig[type].direction === 'asc' ? 'desc' : 'asc';
             } else {
                 AppState.sortConfig[type] = { key, direction: 'asc' };
             }
             
-            AppState.currentPage[type] = 1; // Reset to first page when sorting
+            AppState.currentPage[type] = 1;
             updateTable(type);
         });
-        
-        // Keyboard support
         th.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
@@ -3129,74 +2236,24 @@ function setupEventListeners() {
         });
     });
     
-    // Set current year in footer
+    // Set current year
     const currentYear = document.getElementById('currentYear');
-    if (currentYear) {
-        currentYear.textContent = new Date().getFullYear();
-    }
+    if (currentYear) currentYear.textContent = new Date().getFullYear();
     
-    // Auto-save indicator
+    // Auto-save
     setInterval(() => {
         if (AppState.lastSaveTime && (new Date() - AppState.lastSaveTime) > 30000) {
-            // Save every 30 seconds if there are changes
             saveData();
         }
     }, 30000);
     
-    // Window resize handling
-    window.addEventListener('resize', () => {
-        // Update table responsiveness
-        updateDailyTable();
-    });
+    // Window resize
+    window.addEventListener('resize', () => updateDailyTable());
 }
 
 // ============================================
-// Initialize Application
+// Initialization Helpers
 // ============================================
-
-function init() {
-    console.log('Initializing Garment Management System v3.2.3');
-    
-    // Initialize DOM cache
-    initDOM();
-    
-    initTheme();
-    setupNavigation();
-    setupEventListeners();
-    loadData();
-    updateForm();
-    initDailyEntry();
-    
-    // Create save indicator
-    createSaveIndicator();
-    
-    // Initial section based on hash
-    const hash = window.location.hash.substring(1);
-    if (hash && ['form', 'daily', 'weekly', 'monthly', 'export', 'settings'].includes(hash)) {
-        setTimeout(() => showSection(hash), 100);
-    } else {
-        showSection('form');
-    }
-    
-    // Show welcome message
-    setTimeout(() => {
-        showToast('Garment Management System v3.2.3 loaded successfully', 'success', 3000);
-    }, 1000);
-    
-    // Add keyboard shortcuts help
-    document.addEventListener('keydown', function(e) {
-        // Ctrl+S to save
-        if (e.ctrlKey && e.key === 's') {
-            e.preventDefault();
-            saveData();
-        }
-        // Ctrl+E to export
-        if (e.ctrlKey && e.key === 'e') {
-            e.preventDefault();
-            showSection('export');
-        }
-    });
-}
 
 function createSaveIndicator() {
     const indicator = document.createElement('div');
@@ -3205,16 +2262,34 @@ function createSaveIndicator() {
     indicator.innerHTML = '<i class="fas fa-save"></i> <span>Auto-saved</span>';
     indicator.style.display = 'none';
     document.body.appendChild(indicator);
-    
-    DOM.saveIndicator = indicator;
 }
 
-// Start the application
+// ============================================
+// Start Application & Global Functions
+// ============================================
+
 document.addEventListener('DOMContentLoaded', init);
 
 // Global functions for HTML onclick handlers
 window.clearAllData = clearAllData;
-window.clearDailyEntries = clearDailyEntries;
+window.clearDailyEntries = (event) => {
+    const today = new Date().toISOString().split('T')[0];
+    const todayEntries = AppState.dailyEntries[today] || {};
+    const entryCount = Object.keys(todayEntries).length;
+    
+    if (entryCount === 0) {
+        showToast('No daily entries for today', 'warning');
+        return;
+    }
+    
+    showConfirmation(`Clear Today's Entries?`, `This will clear ${entryCount} daily entries for ${formatDate(today)}.\n\nThis action cannot be undone.`, () => {
+        delete AppState.dailyEntries[today];
+        if (saveData()) {
+            updateDailyTable();
+            showToast('Today\'s entries cleared', 'success');
+        }
+    }, event?.currentTarget);
+};
 window.exportToPDF = exportToPDF;
 window.exportToExcel = exportToExcel;
 window.exportBackup = exportBackup;
@@ -3231,18 +2306,10 @@ window.showSection = showSection;
 window.closeDailyModal = closeDailyModal;
 window.addAllToday = addAllToday;
 window.saveAllDailyEntries = saveAllDailyEntries;
-// Add to global functions at the bottom of app.js
 window.showConfirmation = showConfirmation;
 window.closeConfirmationModal = closeConfirmationModal;
-window.downloadFile = downloadFile;
 
 // Export for testing
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = {
-        AppState,
-        calculateNetHours,
-        calculateTimeDifference,
-        formatDate,
-        formatTime
-    };
+    module.exports = { AppState, calculateNetHours, calculateTimeDifference, formatDate, formatTime };
 }
