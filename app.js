@@ -829,13 +829,16 @@ function loadDailyEntries() {
     
     updateDailyTable();
 }
+// FIXED: Store focused input state
+let focusedDailyInput = null;
+let originalDailyInputValue = null;
 
-// FIXED: Daily table now correctly displays ALL unique employees
+// FIXED: Daily table now only renders on load or date change
 function updateDailyTable() {
     const date = DOM.dailyDate ? DOM.dailyDate.value : AppState.selectedDate;
     const dailyData = AppState.dailyEntries[date] || {};
     
-    // FIX: Get ALL unique employee names from AppState.employees
+    // Get ALL unique employee names from AppState.employees
     const allEmployees = [];
     AppState.employees.forEach(emp => {
         if (!allEmployees.includes(emp.name)) {
@@ -877,18 +880,6 @@ function updateDailyTable() {
         DOM.dailyEmpty.classList.remove('show');
     }
     
-    // FIX: Store currently focused element before re-rendering
-    const focusedElement = document.activeElement;
-    let shouldRefocus = false;
-    let refocusEmployee = null;
-    let refocusValue = '';
-    
-    if (focusedElement && focusedElement.classList.contains('daily-input')) {
-        shouldRefocus = true;
-        refocusEmployee = focusedElement.getAttribute('data-employee');
-        refocusValue = focusedElement.value;
-    }
-    
     let html = '';
     allEmployees.forEach(employeeName => {
         const entry = dailyData[employeeName] || {
@@ -902,11 +893,6 @@ function updateDailyTable() {
         const netHours = calculateNetHours(entry.startTime, entry.breakTime, entry.endTime);
         const breakDuration = calculateActualBreakDuration(entry.startTime, entry.breakTime, entry.endTime);
         
-        // FIX: If this is the employee we need to refocus, use their current value
-        const currentValue = (shouldRefocus && refocusEmployee === employeeName) 
-            ? refocusValue 
-            : entry.clothes;
-        
         html += `
             <tr data-employee="${employeeName}">
                 <td>
@@ -919,12 +905,12 @@ function updateDailyTable() {
                 </td>
                 <td>
                     <input type="number" class="daily-input" 
-                           value="${currentValue}" 
+                           value="${entry.clothes}" 
                            min="0" 
                            data-employee="${employeeName}"
                            placeholder="0"
                            aria-label="Garments for ${employeeName}"
-                           data-last-value="${entry.clothes}">
+                           data-original="${entry.clothes}">
                 </td>
                 <td>
                     <div class="time-cell">
@@ -933,7 +919,7 @@ function updateDailyTable() {
                     </div>
                 </td>
                 <td>
-                    <span class="text-primary">${formatHours(netHours)}h</span>
+                    <span class="text-primary daily-hours" data-employee="${employeeName}">${formatHours(netHours)}h</span>
                 </td>
                 <td>
                     <div class="actions">
@@ -955,76 +941,55 @@ function updateDailyTable() {
         DOM.dailyTableBody.innerHTML = html;
     }
     
-    // FIX: Improved input event handling for mobile
+    // FIXED: Simple event listeners - NO re-rendering during input
     document.querySelectorAll('.daily-input').forEach(input => {
-        // Use input event for immediate feedback on mobile
-        input.addEventListener('input', function() {
-            const employeeName = this.getAttribute('data-employee');
-            const currentValue = parseInt(this.value) || 0;
-            const lastValue = parseInt(this.getAttribute('data-last-value')) || 0;
-            
-            // Only save if value actually changed
-            if (currentValue !== lastValue) {
-                // Update last value attribute
-                this.setAttribute('data-last-value', currentValue);
-                
-                // Save with debounce
-                clearTimeout(this.saveTimer);
-                this.saveTimer = setTimeout(() => {
-                    saveDailyGarment(employeeName, currentValue);
-                }, 300); // Reduced debounce time for better UX
-            }
-        });
-        
-        // Use change event as fallback
-        input.addEventListener('change', function() {
-            const employeeName = this.getAttribute('data-employee');
-            const clothes = parseInt(this.value) || 0;
-            
-            // Clear any pending timers
-            clearTimeout(this.saveTimer);
-            
-            // Save immediately
-            saveDailyGarment(employeeName, clothes);
-        });
-        
-        // Handle focus/blur for better mobile UX
+        // Store original focus state
         input.addEventListener('focus', function() {
+            focusedDailyInput = this;
+            originalDailyInputValue = this.value;
             this.classList.add('focused');
         });
         
+        // Save on blur (when user moves away from input)
         input.addEventListener('blur', function() {
-            this.classList.remove('focused');
-            const employeeName = this.getAttribute('data-employee');
-            const clothes = parseInt(this.value) || 0;
-            
-            // Save on blur (when user moves away from input)
-            saveDailyGarment(employeeName, clothes);
+            if (focusedDailyInput === this) {
+                const employeeName = this.getAttribute('data-employee');
+                const clothes = parseInt(this.value) || 0;
+                const originalValue = parseInt(this.getAttribute('data-original')) || 0;
+                
+                // Only save if value changed
+                if (clothes !== originalValue) {
+                    saveDailyGarment(employeeName, clothes);
+                    this.setAttribute('data-original', clothes);
+                }
+                
+                this.classList.remove('focused');
+                focusedDailyInput = null;
+                originalDailyInputValue = null;
+            }
         });
         
         // Handle Enter key
-        input.addEventListener('keypress', function(e) {
+        input.addEventListener('keydown', function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 this.blur(); // Trigger blur which will save
             }
         });
-    });
-    
-    // FIX: Refocus the element that was previously focused
-    if (shouldRefocus && refocusEmployee) {
-        setTimeout(() => {
-            const inputToFocus = document.querySelector(`.daily-input[data-employee="${refocusEmployee}"]`);
-            if (inputToFocus) {
-                inputToFocus.focus();
-                // Move cursor to end of input
-                inputToFocus.setSelectionRange(inputToFocus.value.length, inputToFocus.value.length);
+        
+        // For mobile: handle virtual keyboard done/next buttons
+        input.addEventListener('change', function() {
+            // This fires when input loses focus AND value changed
+            // But we already handle it in blur, so just in case
+            if (focusedDailyInput === this) {
+                this.blur();
             }
-        }, 50);
-    }
+        });
+    });
     
     updateDailyStats();
 }
+
 
 function getEmployeeType(employeeName) {
     const employee = AppState.employees.find(emp => emp.name === employeeName);
@@ -1042,7 +1007,7 @@ function updateDailyStats() {
     const date = DOM.dailyDate ? DOM.dailyDate.value : AppState.selectedDate;
     const dailyData = AppState.dailyEntries[date] || {};
     
-    // FIX: Use all employees count
+    // Get ALL unique employees
     const allEmployees = [];
     AppState.employees.forEach(emp => {
         if (!allEmployees.includes(emp.name)) {
@@ -1068,32 +1033,23 @@ function updateDailyStats() {
     const avgGarments = activeCount > 0 ? (totalGarments / activeCount).toFixed(1) : '0';
     const efficiency = totalHours > 0 ? (totalGarments / totalHours).toFixed(2) : '0';
     
-    // Update elements only if they exist and values changed
-    if (DOM.totalEmployees && DOM.totalEmployees.textContent !== totalEmployees.toString()) {
-        DOM.totalEmployees.textContent = totalEmployees;
-    }
-    if (DOM.dailyActive && DOM.dailyActive.textContent !== activeCount.toString()) {
-        DOM.dailyActive.textContent = activeCount;
-    }
-    if (DOM.dailyGarments && DOM.dailyGarments.textContent !== totalGarments.toString()) {
-        DOM.dailyGarments.textContent = totalGarments;
-    }
-    if (DOM.dailyHours && DOM.dailyHours.textContent !== formatHours(totalHours)) {
-        DOM.dailyHours.textContent = formatHours(totalHours);
-    }
-    if (DOM.dailyAvg && DOM.dailyAvg.textContent !== avgGarments) {
-        DOM.dailyAvg.textContent = avgGarments;
-    }
+    // Update stats elements
+    if (DOM.totalEmployees) DOM.totalEmployees.textContent = totalEmployees;
+    if (DOM.dailyActive) DOM.dailyActive.textContent = activeCount;
+    if (DOM.dailyGarments) DOM.dailyGarments.textContent = totalGarments;
+    if (DOM.dailyHours) DOM.dailyHours.textContent = formatHours(totalHours);
+    if (DOM.dailyAvg) DOM.dailyAvg.textContent = avgGarments;
     
     // Update footer efficiency
-    if (DOM.footerEfficiency && DOM.footerEfficiency.textContent !== efficiency) {
+    if (DOM.footerEfficiency) {
         DOM.footerEfficiency.textContent = efficiency;
     }
     
-    if (DOM.navDaily && DOM.navDaily.textContent !== activeCount.toString()) {
+    if (DOM.navDaily) {
         DOM.navDaily.textContent = activeCount;
     }
 }
+
 
 
 function saveDailyGarment(employeeName, clothes) {
@@ -1114,20 +1070,16 @@ function saveDailyGarment(employeeName, clothes) {
         };
     }
     
-    // Only update if value changed
-    if (AppState.dailyEntries[date][employeeName].clothes !== clothes) {
-        AppState.dailyEntries[date][employeeName].clothes = clothes;
-        
-        // Use a more efficient save approach for mobile
-        if (saveData()) {
-            // Update stats without re-rendering entire table
-            updateDailyStats();
-            
-            // Update only the specific row's display (if needed)
-            updateDailyRowDisplay(employeeName, clothes);
-        }
-    }
+    // Update the data
+    AppState.dailyEntries[date][employeeName].clothes = clothes;
+    
+    // Save to localStorage (but don't re-render table)
+    saveData();
+    
+    // Update ONLY the stats - NOT the table
+    updateDailyStats();
 }
+
 // NEW: Optimized function to update only specific row
 function updateDailyRowDisplay(employeeName, clothes) {
     // Find the row for this employee
@@ -1287,10 +1239,52 @@ function saveDailyEntry() {
     };
     
     saveData();
-    updateDailyTable();
+    
+    // FIXED: Instead of updateDailyTable(), only update the specific row
+    updateDailyRow(AppState.editingDailyId);
+    
     closeDailyModal();
     
     showToast(`Daily entry saved for ${AppState.editingDailyId}`, 'success');
+}
+
+// NEW: Function to update only one row without re-rendering entire table
+function updateDailyRow(employeeName) {
+    const date = DOM.dailyDate ? DOM.dailyDate.value : AppState.selectedDate;
+    const entry = AppState.dailyEntries[date]?.[employeeName];
+    
+    if (!entry) return;
+    
+    const row = document.querySelector(`tr[data-employee="${employeeName}"]`);
+    if (!row) return;
+    
+    const netHours = calculateNetHours(entry.startTime, entry.breakTime, entry.endTime);
+    const breakDuration = calculateActualBreakDuration(entry.startTime, entry.breakTime, entry.endTime);
+    
+    // Update input value and original attribute
+    const input = row.querySelector('.daily-input');
+    if (input && document.activeElement !== input) {
+        input.value = entry.clothes;
+        input.setAttribute('data-original', entry.clothes);
+    }
+    
+    // Update hours display
+    const hoursSpan = row.querySelector('.daily-hours');
+    if (hoursSpan) {
+        hoursSpan.textContent = `${formatHours(netHours)}h`;
+    }
+    
+    // Update time cell
+    const timeCell = row.querySelector('.time-cell');
+    if (timeCell) {
+        timeCell.innerHTML = `
+            <small>${formatTime(entry.startTime)} - ${formatTime(entry.endTime)}</small>
+            <div>Break: ${formatTime(entry.breakTime)} (${formatHours(breakDuration)}h)</div>
+        `;
+    }
+    
+    // Update stats
+    updateDailyStats();
 }
 
 function removeDailyEntry(employeeName) {
@@ -1310,10 +1304,27 @@ function removeDailyEntry(employeeName) {
         }
         
         saveData();
-        updateDailyTable();
+        
+        // FIXED: Only update this row and stats
+        const row = document.querySelector(`tr[data-employee="${employeeName}"]`);
+        if (row) {
+            const input = row.querySelector('.daily-input');
+            if (input) {
+                input.value = 0;
+                input.setAttribute('data-original', 0);
+            }
+            
+            const hoursSpan = row.querySelector('.daily-hours');
+            if (hoursSpan) {
+                hoursSpan.textContent = '0.00h';
+            }
+        }
+        
+        updateDailyStats();
         showToast(`Entry removed for ${employeeName}`, 'success');
     }
 }
+
 
 function closeDailyModal() {
     const modal = document.getElementById('dailyTimeModal');
